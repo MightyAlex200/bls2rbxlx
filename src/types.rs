@@ -60,13 +60,6 @@ pub struct Color3 {
 
 impl From<(f32, f32, f32, f32)> for Color3 {
     fn from((r, g, b, a): (f32, f32, f32, f32)) -> Color3 {
-        println!(
-            "{} {} {} {}",
-            (r * 255.) as u8,
-            (g * 255.) as u8,
-            (b * 255.) as u8,
-            a
-        );
         let f = |v| (v * 255.) as u8;
         Color3 {
             r: f(r),

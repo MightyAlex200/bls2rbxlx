@@ -17,15 +17,16 @@ mod xml;
 use types::{CFrame, Color3, Item, Property, Vector3};
 use xml::*;
 
-const SCALE: f32 = 2.;
+const SCALE: f32 = 1.;
 
 lazy_static! {
 	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"(\d+?)x(\d+)(F| Base)?").unwrap();
 	static ref RAMP_BRICK_RE: Regex = Regex::new(r"(\d+)° Ramp (\d+)x").unwrap();
+	static ref CORNER_RAMP_BRICK_RE: Regex = Regex::new(r"(\d+)° Ramp Corner").unwrap();
 }
 
 fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 64]) -> Vec<Item> {
-	const WEDGE_LIP_SIZE: f32 = 0.3;
+	const WEDGE_LIP_SIZE: f32 = 0.15 * SCALE;
 
 	match get_brick_type(&brick) {
 		BrickType::Regular { cframe, size } => vec![{
@@ -42,6 +43,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 		}],
 		BrickType::Ramp { cframe, size } => vec![
 			{
+				// Wedge part of ramp
 				let mut item = Item::default("WedgePart".to_string());
 				item.properties.insert(
 					"size".to_string(),
@@ -52,7 +54,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 					Property::CFrame(
 						cframe.clone()
 							+ Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.)
-							+ forward_from_angle(brick.angle),
+							+ forward_from_angle(brick.angle) * SCALE * 0.5,
 					),
 				);
 				item.properties.insert(
@@ -62,6 +64,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 				item
 			},
 			{
+				// Ramp lip (bottom of ramp)
 				let mut item = Item::default("Part".to_string());
 				item.properties.insert(
 					"size".to_string(),
@@ -72,7 +75,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 					Property::CFrame(
 						cframe.clone()
 							+ Vector3::new(0., -size.y / 2. + WEDGE_LIP_SIZE / 2., 0.)
-							+ forward_from_angle(brick.angle),
+							+ forward_from_angle(brick.angle) * SCALE * 0.5,
 					),
 				);
 				item.properties.insert(
@@ -82,16 +85,132 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 				item
 			},
 			{
+				// Back of ramp
 				let mut item = Item::default("Part".to_string());
 				item.properties.insert(
 					"size".to_string(),
-					Property::Vector3(Vector3::new(size.x, size.y, 1.)),
+					Property::Vector3(Vector3::new(size.x, size.y, SCALE)),
+				);
+				item.properties.insert(
+					"CFrame".to_string(),
+					Property::CFrame(cframe - (forward_from_angle(brick.angle) * (size.z / 2.))),
+				);
+				item.properties.insert(
+					"Color3uint8".to_string(),
+					Property::Color3(colors[brick.color_index as usize].into()),
+				);
+				item
+			},
+		],
+		BrickType::RampCorner {
+			wedge_cframe_1,
+			wedge_cframe_2,
+			corner_cframe,
+			size,
+		} => vec![
+			{
+				// Corner wedge of corner ramp
+				let mut item = Item::default("CornerWedgePart".to_string());
+				item.properties.insert(
+					"size".to_string(),
+					Property::Vector3(Vector3::new(
+						size.x - SCALE,
+						size.y - WEDGE_LIP_SIZE,
+						size.z - SCALE,
+					)),
 				);
 				item.properties.insert(
 					"CFrame".to_string(),
 					Property::CFrame(
-						cframe - (forward_from_angle(brick.angle) * (size.z / 2.))
-							+ (forward_from_angle(brick.angle) * 0.5),
+						corner_cframe.clone()
+							+ forward_from_angle(brick.angle) * SCALE * 0.5
+							+ right_from_angle(brick.angle) * SCALE * 0.5
+							+ Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.),
+					),
+				);
+				item.properties.insert(
+					"Color3uint8".to_string(),
+					Property::Color3(colors[brick.color_index as usize].into()),
+				);
+				item
+			},
+			{
+				// Corner of corner ramp
+				let mut item = Item::default("Part".to_string());
+				item.properties.insert(
+					"size".to_string(),
+					Property::Vector3(Vector3::new(SCALE, size.y - WEDGE_LIP_SIZE, SCALE)),
+				);
+				item.properties.insert(
+					"CFrame".to_string(),
+					Property::CFrame(
+						corner_cframe.clone()
+							+ forward_from_angle(brick.angle) * -SCALE
+							+ right_from_angle(brick.angle) * -SCALE
+							+ Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.),
+					),
+				);
+				item.properties.insert(
+					"Color3uint8".to_string(),
+					Property::Color3(colors[brick.color_index as usize].into()),
+				);
+				item
+			},
+			{
+				// First side of the corner ramp
+				let mut item = Item::default("WedgePart".to_string());
+				item.properties.insert(
+					"size".to_string(),
+					Property::Vector3(Vector3::new(SCALE, size.y - WEDGE_LIP_SIZE, size.z - SCALE)),
+				);
+				item.properties.insert(
+					"CFrame".to_string(),
+					Property::CFrame(
+						wedge_cframe_1
+							+ forward_from_angle(brick.angle) * -SCALE
+							+ right_from_angle(brick.angle) * SCALE * 0.5
+							+ Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.),
+					),
+				);
+				item.properties.insert(
+					"Color3uint8".to_string(),
+					Property::Color3(colors[brick.color_index as usize].into()),
+				);
+				item
+			},
+			{
+				// Second side of the corner ramp
+				let mut item = Item::default("WedgePart".to_string());
+				item.properties.insert(
+					"size".to_string(),
+					Property::Vector3(Vector3::new(SCALE, size.y - WEDGE_LIP_SIZE, size.z - SCALE)),
+				);
+				item.properties.insert(
+					"CFrame".to_string(),
+					Property::CFrame(
+						wedge_cframe_2
+							+ right_from_angle(brick.angle) * -SCALE
+							+ forward_from_angle(brick.angle) * SCALE * 0.5
+							+ Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.),
+					),
+				);
+				item.properties.insert(
+					"Color3uint8".to_string(),
+					Property::Color3(colors[brick.color_index as usize].into()),
+				);
+				item
+			},
+			{
+				// Lip of corner ramp (bottom of ramp)
+				let mut item = Item::default("Part".to_string());
+				item.properties.insert(
+					"size".to_string(),
+					Property::Vector3(Vector3::new(size.x, WEDGE_LIP_SIZE, size.z)),
+				);
+				item.properties.insert(
+					"CFrame".to_string(),
+					Property::CFrame(
+						corner_cframe + Vector3::new(0., -size.y / 2. + WEDGE_LIP_SIZE / 2., 0.),
 					),
 				);
 				item.properties.insert(
@@ -123,10 +242,23 @@ fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
 
 		let x = caps.get(2).unwrap().as_str().parse::<u8>().unwrap();
 		let z = 2;
-		let y = if let Some(_) = caps.get(3) { 0.4 } else { 1.2 };
+		let y = 1.2;
 		BrickType::Ramp {
 			size: Vector3::new(x as f32 * SCALE, y * SCALE, z as f32 * SCALE),
 			cframe: cframe_from_pos_and_rot(brick.position, brick.angle),
+		}
+	} else if let Some(caps) = CORNER_RAMP_BRICK_RE.captures(&brick.ui_name) {
+		// TODO: Be generic over angles
+		assert_eq!(caps.get(1).unwrap().as_str(), "25");
+
+		let x = 3.;
+		let z = x;
+		let y = 1.2;
+		BrickType::RampCorner {
+			size: Vector3::new(x * SCALE, y * SCALE, z * SCALE),
+			corner_cframe: cframe_from_pos_and_rot(brick.position, (brick.angle + 2) % 4),
+			wedge_cframe_1: cframe_from_pos_and_rot(brick.position, (brick.angle + 1) % 4),
+			wedge_cframe_2: cframe_from_pos_and_rot(brick.position, brick.angle),
 		}
 	} else {
 		BrickType::Unknown
@@ -139,6 +271,15 @@ fn forward_from_angle(angle: u8) -> Vector3 {
 		1 => Vector3::new(1., 0., 0.),
 		2 => Vector3::new(0., 0., 1.),
 		_ => Vector3::new(-1., 0., 0.),
+	}
+}
+
+fn right_from_angle(angle: u8) -> Vector3 {
+	match angle {
+		0 => Vector3::new(1., 0., 0.),
+		1 => Vector3::new(0., 0., 1.),
+		2 => Vector3::new(-1., 0., 0.),
+		_ => Vector3::new(0., 0., -1.),
 	}
 }
 
@@ -169,8 +310,20 @@ fn cframe_from_pos_and_rot(pos: (f32, f32, f32), angle: u8) -> CFrame {
 }
 
 enum BrickType {
-	Regular { cframe: CFrame, size: Vector3 },
-	Ramp { cframe: CFrame, size: Vector3 },
+	Regular {
+		cframe: CFrame,
+		size: Vector3,
+	},
+	Ramp {
+		cframe: CFrame,
+		size: Vector3,
+	},
+	RampCorner {
+		corner_cframe: CFrame,
+		wedge_cframe_1: CFrame,
+		wedge_cframe_2: CFrame,
+		size: Vector3,
+	},
 	Unknown,
 }
 
