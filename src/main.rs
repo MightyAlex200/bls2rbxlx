@@ -21,143 +21,12 @@ const SCALE: f32 = 2.;
 
 lazy_static! {
 	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"(\d+?)x(\d+)(F| Base)?").unwrap();
+	static ref RAMP_BRICK_RE: Regex = Regex::new(r"(\d+)° Ramp (\d+)x").unwrap();
 }
 
-// CFrame but only the rotation matrix values
-// struct CFrameQuat {
-// 	r00: f64,
-// 	r01: f64,
-// 	r02: f64,
-// 	r10: f64,
-// 	r11: f64,
-// 	r12: f64,
-// 	r20: f64,
-// 	r21: f64,
-// 	r22: f64,
-// }
-
-// const ROTATIONS: [CFrameQuat; 4] = [
-// 	CFrameQuat {
-// 		r00: 1.,
-// 		r01: 0.,
-// 		r02: 0.,
-// 		r10: 0.,
-// 		r11: 1.,
-// 		r12: 0.,
-// 		r20: 0.,
-// 		r21: 0.,
-// 		r22: 1.,
-// 	},
-// 	CFrameQuat {
-// 		r00: 0.,
-// 		r01: 0.,
-// 		r02: 1.,
-// 		r10: 0.,
-// 		r11: 1.,
-// 		r12: 0.,
-// 		r20: -1.,
-// 		r21: 0.,
-// 		r22: 0.,
-// 	},
-// 	CFrameQuat {
-// 		r00: -1.,
-// 		r01: 0.,
-// 		r02: 0.,
-// 		r10: 0.,
-// 		r11: 1.,
-// 		r12: 0.,
-// 		r20: 0.,
-// 		r21: 0.,
-// 		r22: -1.,
-// 	},
-// 	CFrameQuat {
-// 		r00: 0.,
-// 		r01: 0.,
-// 		r02: -1.,
-// 		r10: 0.,
-// 		r11: 1.,
-// 		r12: 0.,
-// 		r20: 1.,
-// 		r21: 0.,
-// 		r22: 0.,
-// 	},
-// ];
-
-// fn cframe_with_rot(x: f64, y: f64, z: f64, rotation: u8) -> CoordinateFrame {
-// 	let CFrameQuat {
-// 		r00,
-// 		r01,
-// 		r02,
-// 		r10,
-// 		r11,
-// 		r12,
-// 		r20,
-// 		r21,
-// 		r22,
-// 	} = ROTATIONS[rotation as usize];
-// 	CoordinateFrame {
-// 		x,
-// 		y,
-// 		z,
-// 		r00,
-// 		r01,
-// 		r02,
-// 		r10,
-// 		r11,
-// 		r12,
-// 		r20,
-// 		r21,
-// 		r22,
-// 	}
-// }
-
-// fn autobricksize(name: &str) -> Option<types::size> {
-// 	let captures = BRICK_SIZE_REGEX.captures(name)?;
-// 	let (x, z): (f64, f64) = (
-// 		captures.get(1)?.as_str().parse().ok()?,
-// 		captures.get(2)?.as_str().parse().ok()?,
-// 	);
-// 	if let Some(_) = captures.get(3) {
-// 		// F
-// 		Some(types::size(Vector3 {
-// 			x: x * 0.5,
-// 			y: 0.2,
-// 			z: z * 0.5,
-// 		}))
-// 	} else {
-// 		Some(types::size(Vector3 {
-// 			x: x * 0.5,
-// 			y: 0.6,
-// 			z: z * 0.5,
-// 		}))
-// 	}
-// }
-
-// fn get_brick_size(brick: &bl_save::BrickBase) -> types::size {
-// 	BRICK_SIZES
-// 		.get(&brick.ui_name)
-// 		.cloned()
-// 		.or_else(|| autobricksize(&brick.ui_name))
-// 		.unwrap_or_else(|| {
-// 			println!("UNKNOWN BRICK NAME: {}", brick.ui_name);
-// 			types::size(Vector3 {
-// 				x: 1.,
-// 				y: 1.,
-// 				z: 1.,
-// 			})
-// 		})
-// }
-
-// fn get_brick_cframe(brick: &bl_save::BrickBase) -> CFrame {
-// 	cframe_with_rot(
-// 		brick.position.0 as f64,
-// 		brick.position.2 as f64,
-// 		-brick.position.1 as f64,
-// 		brick.angle,
-// 	)
-// }
-
 fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 64]) -> Vec<Item> {
+	const WEDGE_LIP_SIZE: f32 = 0.3;
+
 	match get_brick_type(&brick) {
 		BrickType::Regular { cframe, size } => vec![{
 			let mut item = Item::default("Part".to_string());
@@ -171,20 +40,72 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 			);
 			item
 		}],
-		BrickType::Wedge { cframe, size } => unimplemented!(),
+		BrickType::Ramp { cframe, size } => vec![
+			{
+				let mut item = Item::default("WedgePart".to_string());
+				item.properties.insert(
+					"size".to_string(),
+					Property::Vector3(size.clone() - Vector3::new(0., WEDGE_LIP_SIZE, 0.)),
+				);
+				item.properties.insert(
+					"CFrame".to_string(),
+					Property::CFrame(
+						cframe.clone()
+							+ Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.)
+							+ forward_from_angle(brick.angle),
+					),
+				);
+				item.properties.insert(
+					"Color3uint8".to_string(),
+					Property::Color3(colors[brick.color_index as usize].into()),
+				);
+				item
+			},
+			{
+				let mut item = Item::default("Part".to_string());
+				item.properties.insert(
+					"size".to_string(),
+					Property::Vector3(Vector3::new(size.x, WEDGE_LIP_SIZE, size.z)),
+				);
+				item.properties.insert(
+					"CFrame".to_string(),
+					Property::CFrame(
+						cframe.clone()
+							+ Vector3::new(0., -size.y / 2. + WEDGE_LIP_SIZE / 2., 0.)
+							+ forward_from_angle(brick.angle),
+					),
+				);
+				item.properties.insert(
+					"Color3uint8".to_string(),
+					Property::Color3(colors[brick.color_index as usize].into()),
+				);
+				item
+			},
+			{
+				let mut item = Item::default("Part".to_string());
+				item.properties.insert(
+					"size".to_string(),
+					Property::Vector3(Vector3::new(size.x, size.y, 1.)),
+				);
+				item.properties.insert(
+					"CFrame".to_string(),
+					Property::CFrame(
+						cframe - (forward_from_angle(brick.angle) * (size.z / 2.))
+							+ (forward_from_angle(brick.angle) * 0.5),
+					),
+				);
+				item.properties.insert(
+					"Color3uint8".to_string(),
+					Property::Color3(colors[brick.color_index as usize].into()),
+				);
+				item
+			},
+		],
 		BrickType::Unknown => {
 			println!("UNKNOWN BRICK: {:?}", brick);
 			vec![]
 		}
 	}
-	// Item::new(
-	// 	"Part",
-	// 	types::RBXUUID(uuid::Uuid::new_v4()),
-	// 	types::Name(brick.ui_name.to_string()),
-	// 	get_brick_cframe(&brick),
-	// 	get_brick_size(&brick),
-	// 	get_brick_color(&brick, colors),
-	// )
 }
 
 fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
@@ -196,8 +117,28 @@ fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
 			size: Vector3::new(x * SCALE, y * SCALE, z * SCALE),
 			cframe: cframe_from_pos_and_rot(brick.position, brick.angle),
 		}
+	} else if let Some(caps) = RAMP_BRICK_RE.captures(&brick.ui_name) {
+		// TODO: Be generic over first capture (angle)
+		assert_eq!(caps.get(1).unwrap().as_str(), "25");
+
+		let x = caps.get(2).unwrap().as_str().parse::<u8>().unwrap();
+		let z = 2;
+		let y = if let Some(_) = caps.get(3) { 0.4 } else { 1.2 };
+		BrickType::Ramp {
+			size: Vector3::new(x as f32 * SCALE, y * SCALE, z as f32 * SCALE),
+			cframe: cframe_from_pos_and_rot(brick.position, brick.angle),
+		}
 	} else {
-		BrickType::Unknown // TODO: Wedge
+		BrickType::Unknown
+	}
+}
+
+fn forward_from_angle(angle: u8) -> Vector3 {
+	match angle {
+		0 => Vector3::new(0., 0., -1.),
+		1 => Vector3::new(1., 0., 0.),
+		2 => Vector3::new(0., 0., 1.),
+		_ => Vector3::new(-1., 0., 0.),
 	}
 }
 
@@ -207,9 +148,9 @@ fn cframe_from_pos_and_rot(pos: (f32, f32, f32), angle: u8) -> CFrame {
 	let z = -pos.1 * 2. * SCALE;
 	let (r00, r01, r02, r10, r11, r12, r20, r21, r22) = match angle {
 		0 => (1., 0., 0., 0., 1., 0., 0., 0., 1.),
-		1 => (0., 0., 1., 0., 1., 0., -1., 0., 0.),
+		1 => (0., 0., -1., 0., 1., 0., 1., 0., 0.),
 		2 => (-1., 0., 0., 0., 1., 0., 0., 0., -1.),
-		_ => (0., 0., -1., 0., 1., 0., 1., 0., 0.),
+		_ => (0., 0., 1., 0., 1., 0., -1., 0., 0.),
 	};
 	CFrame {
 		x,
@@ -229,7 +170,7 @@ fn cframe_from_pos_and_rot(pos: (f32, f32, f32), angle: u8) -> CFrame {
 
 enum BrickType {
 	Regular { cframe: CFrame, size: Vector3 },
-	Wedge { cframe: CFrame, size: Vector3 },
+	Ramp { cframe: CFrame, size: Vector3 },
 	Unknown,
 }
 

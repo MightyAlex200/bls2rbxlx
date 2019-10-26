@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,
@@ -10,6 +11,37 @@ pub struct Vector3 {
 impl Vector3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Vector3 { x, y, z }
+    }
+}
+
+impl std::ops::Add for Vector3 {
+    type Output = Self;
+    fn add(mut self, other: Self) -> Self {
+        self.x += other.x;
+        self.y += other.y;
+        self.z += other.z;
+        self
+    }
+}
+
+impl std::ops::Sub for Vector3 {
+    type Output = Self;
+    fn sub(mut self, other: Self) -> Self {
+        self.x -= other.x;
+        self.y -= other.y;
+        self.z -= other.z;
+        self
+    }
+}
+
+impl std::ops::Mul<f32> for Vector3 {
+    type Output = Self;
+
+    fn mul(mut self, other: f32) -> Self {
+        self.x *= other;
+        self.y *= other;
+        self.z *= other;
+        self
     }
 }
 
@@ -55,6 +87,7 @@ impl ToString for Color3 {
     }
 }
 
+#[derive(Clone)]
 pub struct CFrame {
     pub x: f32,
     pub y: f32,
@@ -68,6 +101,28 @@ pub struct CFrame {
     pub r20: f32,
     pub r21: f32,
     pub r22: f32,
+}
+
+impl std::ops::Add<Vector3> for CFrame {
+    type Output = Self;
+
+    fn add(mut self, other: Vector3) -> Self {
+        self.x += other.x;
+        self.y += other.y;
+        self.z += other.z;
+        self
+    }
+}
+
+impl std::ops::Sub<Vector3> for CFrame {
+    type Output = Self;
+
+    fn sub(mut self, other: Vector3) -> Self {
+        self.x -= other.x;
+        self.y -= other.y;
+        self.z -= other.z;
+        self
+    }
 }
 
 impl ToString for CFrame {
