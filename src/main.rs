@@ -19,6 +19,8 @@ use xml::*;
 
 const SCALE: f32 = 1.;
 
+const BRICK_HEIGHT: f32 = 1.2;
+
 lazy_static! {
 	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"(\d+?)x(\d+)(F| Base)?").unwrap();
 	static ref RAMP_BRICK_RE: Regex = Regex::new(r"(\d+)° Ramp (\d+)x").unwrap();
@@ -145,8 +147,10 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 					"CFrame".to_string(),
 					Property::CFrame(
 						corner_cframe.clone()
-							+ forward_from_angle(brick.angle) * -SCALE
-							+ right_from_angle(brick.angle) * -SCALE
+							+ forward_from_angle(brick.angle) * (-size.x / 2.)
+							+ forward_from_angle(brick.angle) * SCALE * 0.5
+							+ right_from_angle(brick.angle) * (-size.z / 2.)
+							+ right_from_angle(brick.angle) * SCALE * 0.5
 							+ Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.),
 					),
 				);
@@ -167,7 +171,8 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 					"CFrame".to_string(),
 					Property::CFrame(
 						wedge_cframe_1
-							+ forward_from_angle(brick.angle) * -SCALE
+							+ forward_from_angle(brick.angle) * (-size.x / 2.)
+							+ forward_from_angle(brick.angle) * SCALE * 0.5
 							+ right_from_angle(brick.angle) * SCALE * 0.5
 							+ Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.),
 					),
@@ -189,8 +194,9 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 					"CFrame".to_string(),
 					Property::CFrame(
 						wedge_cframe_2
-							+ right_from_angle(brick.angle) * -SCALE
 							+ forward_from_angle(brick.angle) * SCALE * 0.5
+							+ right_from_angle(brick.angle) * (-size.z / 2.)
+							+ right_from_angle(brick.angle) * SCALE * 0.5
 							+ Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.),
 					),
 				);
@@ -231,29 +237,50 @@ fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
 	if let Some(caps) = REGULAR_BRICK_RE.captures(&brick.ui_name) {
 		let x: f32 = caps.get(1).unwrap().as_str().parse().unwrap(); // These will never panic, check the RE
 		let z: f32 = caps.get(2).unwrap().as_str().parse().unwrap();
-		let y = if let Some(_) = caps.get(3) { 0.4 } else { 1.2 };
+		let y = if let Some(_) = caps.get(3) {
+			0.4
+		} else {
+			BRICK_HEIGHT
+		};
 		BrickType::Regular {
 			size: Vector3::new(x * SCALE, y * SCALE, z * SCALE),
 			cframe: cframe_from_pos_and_rot(brick.position, brick.angle),
 		}
 	} else if let Some(caps) = RAMP_BRICK_RE.captures(&brick.ui_name) {
-		// TODO: Be generic over first capture (angle)
-		assert_eq!(caps.get(1).unwrap().as_str(), "25");
+		// TODO: negative angles
+		let angle = parse_ramp_angle(caps.get(1).unwrap().as_str()).expect("Unknown ramp angle");
 
 		let x = caps.get(2).unwrap().as_str().parse::<u8>().unwrap();
-		let z = 2;
-		let y = 1.2;
+		let z = match angle {
+			RampAngle::Angle25 => 2,
+			_ => 1,
+		};
+		let y = BRICK_HEIGHT
+			* match angle {
+				RampAngle::Angle25 | RampAngle::Angle45 => 1.,
+				RampAngle::Angle72 => 3.,
+				RampAngle::Angle80 => 5.,
+			};
 		BrickType::Ramp {
 			size: Vector3::new(x as f32 * SCALE, y * SCALE, z as f32 * SCALE),
 			cframe: cframe_from_pos_and_rot(brick.position, brick.angle),
 		}
 	} else if let Some(caps) = CORNER_RAMP_BRICK_RE.captures(&brick.ui_name) {
-		// TODO: Be generic over angles
-		assert_eq!(caps.get(1).unwrap().as_str(), "25");
+		// TODO: negative angles
+		let angle =
+			parse_ramp_angle(caps.get(1).unwrap().as_str()).expect("Unknown corner ramp angle");
 
-		let x = 3.;
+		let x = match angle {
+			RampAngle::Angle25 => 3.,
+			_ => 2.,
+		};
 		let z = x;
-		let y = 1.2;
+		let y = BRICK_HEIGHT
+			* match angle {
+				RampAngle::Angle25 | RampAngle::Angle45 => 1.,
+				RampAngle::Angle72 => 3.,
+				RampAngle::Angle80 => 5.,
+			};
 		BrickType::RampCorner {
 			size: Vector3::new(x * SCALE, y * SCALE, z * SCALE),
 			corner_cframe: cframe_from_pos_and_rot(brick.position, (brick.angle + 2) % 4),
@@ -306,6 +333,23 @@ fn cframe_from_pos_and_rot(pos: (f32, f32, f32), angle: u8) -> CFrame {
 		r20,
 		r21,
 		r22,
+	}
+}
+
+enum RampAngle {
+	Angle25,
+	Angle45,
+	Angle72,
+	Angle80,
+}
+
+fn parse_ramp_angle(s: &str) -> Option<RampAngle> {
+	match s {
+		"25" => Some(RampAngle::Angle25),
+		"45" => Some(RampAngle::Angle45),
+		"72" => Some(RampAngle::Angle72),
+		"80" => Some(RampAngle::Angle80),
+		_ => None,
 	}
 }
 
