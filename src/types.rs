@@ -182,6 +182,7 @@ pub struct Item {
     pub class: String,
     pub referent: RbxUuid,
     pub properties: HashMap<String, Property>,
+    pub children: Vec<Item>,
 }
 
 impl Item {
@@ -238,6 +239,7 @@ impl Item {
             class,
             referent: RbxUuid(Uuid::new_v4()),
             properties,
+            children: vec![],
         }
     }
 }
@@ -245,10 +247,11 @@ impl Item {
 impl ToString for Item {
     fn to_string(&self) -> String {
         format!(
-            "<Item class=\"{class}\" referent=\"{referent}\"><Properties>{props}</Properties></Item>",
+            "<Item class=\"{class}\" referent=\"{referent}\"><Properties>{props}</Properties>{children}</Item>",
             class=self.class,
             referent=self.referent.to_string(),
-            props=self.properties.iter().map(|(k, v)| v.property_to_string(k)).collect::<Vec<_>>().join("\n")
+            props=self.properties.iter().map(|(k, v)| v.property_to_string(k)).collect::<Vec<_>>().join("\n"),
+            children=self.children.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n")
         )
     }
 }

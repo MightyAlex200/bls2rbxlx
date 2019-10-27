@@ -22,7 +22,8 @@ const SCALE: f32 = 1.;
 const BRICK_HEIGHT: f32 = 1.2;
 
 lazy_static! {
-	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"(\d+?)x(\d+)(F| Base)?").unwrap();
+	// TODO: Cones, invisible bricks, transparent bricks, ramp crests, tall bricks
+	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"(\d+?)x(\d+)(F| Base)?( Round)?").unwrap();
 	static ref RAMP_BRICK_RE: Regex = Regex::new(r"(-)?(\d+)° Ramp (\d+)x").unwrap();
 	static ref CORNER_RAMP_BRICK_RE: Regex = Regex::new(r"(-)?(\d+)° Ramp Corner").unwrap();
 }
@@ -31,7 +32,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 	const WEDGE_LIP_SIZE: f32 = 0.15 * SCALE;
 
 	match get_brick_type(&brick) {
-		BrickType::Regular { cframe, size } => vec![{
+		BrickType::Regular { cframe, size, mesh } => vec![{
 			let mut item = Item::default("Part".to_string());
 			item.properties
 				.insert("size".to_string(), Property::Vector3(size));
@@ -41,6 +42,10 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 				"Color3uint8".to_string(),
 				Property::Color3(colors[brick.color_index as usize].into()),
 			);
+			if let RegularBrickMesh::Round = mesh {
+				item.children
+					.push(Item::default("CylinderMesh".to_string()))
+			}
 			item
 		}],
 		BrickType::Ramp {
@@ -275,6 +280,11 @@ fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
 		BrickType::Regular {
 			size: Vector3::new(x * SCALE, y * SCALE, z * SCALE),
 			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, false),
+			mesh: if caps.get(4).is_some() {
+				RegularBrickMesh::Round
+			} else {
+				RegularBrickMesh::Block
+			},
 		}
 	} else if let Some(caps) = RAMP_BRICK_RE.captures(&brick.ui_name) {
 		let angle = parse_ramp_angle(caps.get(2).unwrap().as_str()).expect("Unknown ramp angle");
@@ -402,10 +412,16 @@ fn parse_ramp_angle(s: &str) -> Option<RampAngle> {
 	}
 }
 
+enum RegularBrickMesh {
+	Block,
+	Round,
+}
+
 enum BrickType {
 	Regular {
 		cframe: CFrame,
 		size: Vector3,
+		mesh: RegularBrickMesh,
 	},
 	Ramp {
 		cframe: CFrame,
