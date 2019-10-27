@@ -22,7 +22,8 @@ const SCALE: f32 = 1.;
 const BRICK_HEIGHT: f32 = 1.2;
 
 lazy_static! {
-	// TODO: Cones, invisible bricks, transparent bricks, ramp crests, tall bricks
+	// TODO: Cones, invisible bricks, transparent bricks, ramp crests
+	static ref TALL_BRICK_RE: Regex = Regex::new(r"(\d+)x(\d+)x(\d+)").unwrap();
 	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"(\d+?)x(\d+)(F| Base)?( Round)?").unwrap();
 	static ref RAMP_BRICK_RE: Regex = Regex::new(r"(-)?(\d+)° Ramp (\d+)x").unwrap();
 	static ref CORNER_RAMP_BRICK_RE: Regex = Regex::new(r"(-)?(\d+)° Ramp Corner").unwrap();
@@ -269,7 +270,16 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 }
 
 fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
-	if let Some(caps) = REGULAR_BRICK_RE.captures(&brick.ui_name) {
+	if let Some(caps) = TALL_BRICK_RE.captures(&brick.ui_name) {
+		let x: f32 = caps.get(1).unwrap().as_str().parse().unwrap();
+		let z: f32 = caps.get(2).unwrap().as_str().parse().unwrap();
+		let y = caps.get(3).unwrap().as_str().parse::<f32>().unwrap() * BRICK_HEIGHT;
+		BrickType::Regular {
+			size: Vector3::new(x, y, z) * SCALE,
+			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, false),
+			mesh: RegularBrickMesh::Block,
+		}
+	} else if let Some(caps) = REGULAR_BRICK_RE.captures(&brick.ui_name) {
 		let x: f32 = caps.get(1).unwrap().as_str().parse().unwrap(); // These will never panic, check the RE
 		let z: f32 = caps.get(2).unwrap().as_str().parse().unwrap();
 		let y = if let Some(_) = caps.get(3) {
@@ -278,7 +288,7 @@ fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
 			BRICK_HEIGHT
 		};
 		BrickType::Regular {
-			size: Vector3::new(x * SCALE, y * SCALE, z * SCALE),
+			size: Vector3::new(x, y, z) * SCALE,
 			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, false),
 			mesh: if caps.get(4).is_some() {
 				RegularBrickMesh::Round
@@ -302,7 +312,7 @@ fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
 			};
 		let inverted = caps.get(1).is_some();
 		BrickType::Ramp {
-			size: Vector3::new(x as f32 * SCALE, y * SCALE, z as f32 * SCALE),
+			size: Vector3::new(x as f32, y, z as f32) * SCALE,
 			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, inverted),
 			inverted,
 		}
@@ -323,7 +333,7 @@ fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
 			};
 		let inverted = caps.get(1).is_some();
 		BrickType::RampCorner {
-			size: Vector3::new(x * SCALE, y * SCALE, z * SCALE),
+			size: Vector3::new(x, y, z) * SCALE,
 			corner_cframe: cframe_from_pos_and_rot(
 				brick.position,
 				(brick.angle + if inverted { 3 } else { 2 }) % 4,
