@@ -200,7 +200,6 @@ impl Item {
             ("BottomSurface", Property::Token(4)),
             ("BottomSurfaceInput", Property::Token(0)),
             // ("BrickColor", Property::Int(1004)),
-            ("CanCollide", Property::Bool(true)),
             (
                 "CustomPhysicalProperties",
                 Property::PhysProps(PhysicalProperties(false)),

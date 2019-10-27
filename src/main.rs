@@ -22,7 +22,7 @@ use std::{
 const BRICK_HEIGHT: f32 = 1.2;
 
 lazy_static! {
-	// TODO: Cones, ramp crests, lights, noncollidable bricks
+	// TODO: Cones, ramp crests, lights
 	static ref TALL_BRICK_RE: Regex = Regex::new(r"^(\d+)x(\d+)x(\d+)( Print)?$").unwrap();
 	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"^(\d+?)x(\d+)(F| Base)?( Round)?(?: Print)?$").unwrap();
 	static ref RAMP_BRICK_RE: Regex = Regex::new(r"^(-)?(\d+)° Ramp (\d+)x(?: Print)?$").unwrap();
@@ -47,7 +47,9 @@ fn items_from_brick(
 			} else {
 				1. - (color.a as f32 / 255.)
 			}),
-		)
+		);
+		item.properties
+			.insert("CanCollide".to_string(), Property::Bool(brick.collision));
 	};
 
 	match get_brick_type(&brick, scale) {
