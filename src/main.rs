@@ -19,8 +19,6 @@ use std::{
 	path::PathBuf,
 };
 
-const SCALE: f32 = 1.;
-
 const BRICK_HEIGHT: f32 = 1.2;
 
 lazy_static! {
@@ -34,8 +32,9 @@ lazy_static! {
 fn items_from_brick(
 	brick: &bl_save::BrickBase,
 	colors: &[(f32, f32, f32, f32); 64],
+	scale: f32,
 ) -> Result<Vec<Item>, ()> {
-	const WEDGE_LIP_SIZE: f32 = 0.15 * SCALE;
+	let wedge_lip_size: f32 = 0.15 * scale;
 
 	let insert_color = |item: &mut Item| {
 		let color: Color3 = colors[brick.color_index as usize].into();
@@ -51,7 +50,7 @@ fn items_from_brick(
 		)
 	};
 
-	match get_brick_type(&brick) {
+	match get_brick_type(&brick, scale) {
 		BrickType::Regular { cframe, size, mesh } => Ok(vec![{
 			let mut item = Item::default("Part".to_string());
 			item.properties
@@ -75,7 +74,7 @@ fn items_from_brick(
 				let mut item = Item::default("WedgePart".to_string());
 				item.properties.insert(
 					"size".to_string(),
-					Property::Vector3(size.clone() - Vector3::new(0., WEDGE_LIP_SIZE, 0.)),
+					Property::Vector3(size.clone() - Vector3::new(0., wedge_lip_size, 0.)),
 				);
 				item.properties.insert(
 					"CFrame".to_string(),
@@ -83,9 +82,9 @@ fn items_from_brick(
 						cframe.clone()
 							+ Vector3::new(
 								0.,
-								WEDGE_LIP_SIZE / if inverted { -2. } else { 2. },
+								wedge_lip_size / if inverted { -2. } else { 2. },
 								0.,
-							) + forward_from_angle(brick.angle) * SCALE * 0.5,
+							) + forward_from_angle(brick.angle) * scale * 0.5,
 					),
 				);
 				insert_color(&mut item);
@@ -97,7 +96,7 @@ fn items_from_brick(
 				let mut item = Item::default("Part".to_string());
 				item.properties.insert(
 					"size".to_string(),
-					Property::Vector3(Vector3::new(size.x, WEDGE_LIP_SIZE, size.z)),
+					Property::Vector3(Vector3::new(size.x, wedge_lip_size, size.z)),
 				);
 				item.properties.insert(
 					"CFrame".to_string(),
@@ -106,9 +105,9 @@ fn items_from_brick(
 							+ Vector3::new(
 								0.,
 								-size.y / if inverted { -2. } else { 2. }
-									+ WEDGE_LIP_SIZE / if inverted { -2. } else { 2. },
+									+ wedge_lip_size / if inverted { -2. } else { 2. },
 								0.,
-							) + forward_from_angle(brick.angle) * SCALE * 0.5,
+							) + forward_from_angle(brick.angle) * scale * 0.5,
 					),
 				);
 				insert_color(&mut item);
@@ -120,7 +119,7 @@ fn items_from_brick(
 				let mut item = Item::default("Part".to_string());
 				item.properties.insert(
 					"size".to_string(),
-					Property::Vector3(Vector3::new(size.x, size.y, SCALE)),
+					Property::Vector3(Vector3::new(size.x, size.y, scale)),
 				);
 				item.properties.insert(
 					"CFrame".to_string(),
@@ -139,7 +138,7 @@ fn items_from_brick(
 			inverted,
 		} => {
 			let wedge_offset =
-				Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.) * if inverted { -1. } else { 1. };
+				Vector3::new(0., wedge_lip_size / 2., 0.) * if inverted { -1. } else { 1. };
 			Ok(vec![
 				{
 					// Corner wedge of corner ramp
@@ -147,17 +146,17 @@ fn items_from_brick(
 					item.properties.insert(
 						"size".to_string(),
 						Property::Vector3(Vector3::new(
-							size.x - SCALE,
-							size.y - WEDGE_LIP_SIZE,
-							size.z - SCALE,
+							size.x - scale,
+							size.y - wedge_lip_size,
+							size.z - scale,
 						)),
 					);
 					item.properties.insert(
 						"CFrame".to_string(),
 						Property::CFrame(
 							corner_cframe.clone()
-								+ forward_from_angle(brick.angle) * SCALE * 0.5
-								+ right_from_angle(brick.angle) * SCALE * 0.5
+								+ forward_from_angle(brick.angle) * scale * 0.5
+								+ right_from_angle(brick.angle) * scale * 0.5
 								+ wedge_offset.clone(),
 						),
 					);
@@ -170,16 +169,16 @@ fn items_from_brick(
 					let mut item = Item::default("Part".to_string());
 					item.properties.insert(
 						"size".to_string(),
-						Property::Vector3(Vector3::new(SCALE, size.y - WEDGE_LIP_SIZE, SCALE)),
+						Property::Vector3(Vector3::new(scale, size.y - wedge_lip_size, scale)),
 					);
 					item.properties.insert(
 						"CFrame".to_string(),
 						Property::CFrame(
 							corner_cframe.clone()
 								+ forward_from_angle(brick.angle) * (-size.x / 2.)
-								+ forward_from_angle(brick.angle) * SCALE * 0.5
+								+ forward_from_angle(brick.angle) * scale * 0.5
 								+ right_from_angle(brick.angle) * (-size.z / 2.)
-								+ right_from_angle(brick.angle) * SCALE * 0.5
+								+ right_from_angle(brick.angle) * scale * 0.5
 								+ wedge_offset.clone(),
 						),
 					);
@@ -193,9 +192,9 @@ fn items_from_brick(
 					item.properties.insert(
 						"size".to_string(),
 						Property::Vector3(Vector3::new(
-							SCALE,
-							size.y - WEDGE_LIP_SIZE,
-							size.z - SCALE,
+							scale,
+							size.y - wedge_lip_size,
+							size.z - scale,
 						)),
 					);
 					item.properties.insert(
@@ -203,8 +202,8 @@ fn items_from_brick(
 						Property::CFrame(
 							wedge_cframe_1
 								+ forward_from_angle(brick.angle) * (-size.x / 2.)
-								+ forward_from_angle(brick.angle) * SCALE * 0.5
-								+ right_from_angle(brick.angle) * SCALE * 0.5
+								+ forward_from_angle(brick.angle) * scale * 0.5
+								+ right_from_angle(brick.angle) * scale * 0.5
 								+ wedge_offset.clone(),
 						),
 					);
@@ -217,18 +216,18 @@ fn items_from_brick(
 					item.properties.insert(
 						"size".to_string(),
 						Property::Vector3(Vector3::new(
-							SCALE,
-							size.y - WEDGE_LIP_SIZE,
-							size.z - SCALE,
+							scale,
+							size.y - wedge_lip_size,
+							size.z - scale,
 						)),
 					);
 					item.properties.insert(
 						"CFrame".to_string(),
 						Property::CFrame(
 							wedge_cframe_2
-								+ forward_from_angle(brick.angle) * SCALE * 0.5
+								+ forward_from_angle(brick.angle) * scale * 0.5
 								+ right_from_angle(brick.angle) * (-size.z / 2.)
-								+ right_from_angle(brick.angle) * SCALE * 0.5
+								+ right_from_angle(brick.angle) * scale * 0.5
 								+ wedge_offset,
 						),
 					);
@@ -240,7 +239,7 @@ fn items_from_brick(
 					let mut item = Item::default("Part".to_string());
 					item.properties.insert(
 						"size".to_string(),
-						Property::Vector3(Vector3::new(size.x, WEDGE_LIP_SIZE, size.z)),
+						Property::Vector3(Vector3::new(size.x, wedge_lip_size, size.z)),
 					);
 					item.properties.insert(
 						"CFrame".to_string(),
@@ -249,7 +248,7 @@ fn items_from_brick(
 								+ Vector3::new(
 									0.,
 									size.y / if inverted { 2. } else { -2. }
-										+ WEDGE_LIP_SIZE / if inverted { -2. } else { 2. },
+										+ wedge_lip_size / if inverted { -2. } else { 2. },
 									0.,
 								),
 						),
@@ -263,14 +262,14 @@ fn items_from_brick(
 	}
 }
 
-fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
+fn get_brick_type(brick: &bl_save::BrickBase, scale: f32) -> BrickType {
 	if let Some(caps) = TALL_BRICK_RE.captures(&brick.ui_name) {
 		let x: f32 = caps.get(1).unwrap().as_str().parse().unwrap();
 		let z: f32 = caps.get(2).unwrap().as_str().parse().unwrap();
 		let y = caps.get(3).unwrap().as_str().parse::<f32>().unwrap() * BRICK_HEIGHT;
 		BrickType::Regular {
-			size: Vector3::new(x, y, z) * SCALE,
-			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, false),
+			size: Vector3::new(x, y, z) * scale,
+			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, false, scale),
 			mesh: RegularBrickMesh::Block,
 		}
 	} else if let Some(caps) = REGULAR_BRICK_RE.captures(&brick.ui_name) {
@@ -282,8 +281,8 @@ fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
 			BRICK_HEIGHT
 		};
 		BrickType::Regular {
-			size: Vector3::new(x, y, z) * SCALE,
-			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, false),
+			size: Vector3::new(x, y, z) * scale,
+			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, false, scale),
 			mesh: if caps.get(4).is_some() {
 				RegularBrickMesh::Round
 			} else {
@@ -306,8 +305,8 @@ fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
 			};
 		let inverted = caps.get(1).is_some();
 		BrickType::Ramp {
-			size: Vector3::new(x as f32, y, z as f32) * SCALE,
-			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, inverted),
+			size: Vector3::new(x as f32, y, z as f32) * scale,
+			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, inverted, scale),
 			inverted,
 		}
 	} else if let Some(caps) = CORNER_RAMP_BRICK_RE.captures(&brick.ui_name) {
@@ -327,18 +326,20 @@ fn get_brick_type(brick: &bl_save::BrickBase) -> BrickType {
 			};
 		let inverted = caps.get(1).is_some();
 		BrickType::RampCorner {
-			size: Vector3::new(x, y, z) * SCALE,
+			size: Vector3::new(x, y, z) * scale,
 			corner_cframe: cframe_from_pos_and_rot(
 				brick.position,
 				(brick.angle + if inverted { 3 } else { 2 }) % 4,
 				inverted,
+				scale,
 			),
 			wedge_cframe_1: cframe_from_pos_and_rot(
 				brick.position,
 				(brick.angle + 1) % 4,
 				inverted,
+				scale,
 			),
-			wedge_cframe_2: cframe_from_pos_and_rot(brick.position, brick.angle, inverted),
+			wedge_cframe_2: cframe_from_pos_and_rot(brick.position, brick.angle, inverted, scale),
 			inverted,
 		}
 	} else {
@@ -364,10 +365,10 @@ fn right_from_angle(angle: u8) -> Vector3 {
 	}
 }
 
-fn cframe_from_pos_and_rot(pos: (f32, f32, f32), angle: u8, inverted: bool) -> CFrame {
-	let x = pos.0 * 2. * SCALE;
-	let y = pos.2 * 2. * SCALE;
-	let z = -pos.1 * 2. * SCALE;
+fn cframe_from_pos_and_rot(pos: (f32, f32, f32), angle: u8, inverted: bool, scale: f32) -> CFrame {
+	let x = pos.0 * 2. * scale;
+	let y = pos.2 * 2. * scale;
+	let z = -pos.1 * 2. * scale;
 	let (r00, r01, r02, r10, r11, r12, r20, r21, r22) = if inverted {
 		match angle {
 			0 => (-1., 0., -0., 0., -1., -0., -0., -0., 1.),
@@ -451,6 +452,8 @@ struct Args {
 	#[structopt(parse(from_os_str), default_value = "result.rbxlx")]
 	/// File that will be written to
 	output: PathBuf,
+	#[structopt(short, long, default_value = "1")]
+	scale: f32,
 	#[structopt(short, long)]
 	/// Show no output on the command line
 	quiet: bool,
@@ -468,7 +471,7 @@ fn main() {
 
 	for (i, brick) in reader.into_iter().enumerate() {
 		let brick = brick.unwrap();
-		match items_from_brick(&brick.base, &colors) {
+		match items_from_brick(&brick.base, &colors, args.scale) {
 			Ok(new_items) => {
 				for item in new_items {
 					items.push(item);
