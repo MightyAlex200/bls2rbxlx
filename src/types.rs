@@ -62,6 +62,7 @@ impl ToString for Vector3 {
     }
 }
 
+#[derive(Clone)]
 pub struct Color3 {
     pub r: u8,
     pub g: u8,
@@ -226,7 +227,6 @@ impl Item {
             ("TopParamB", Property::Float(0.5)),
             ("TopSurface", Property::Token(3)),
             ("TopSurfaceInput", Property::Token(0)),
-            ("Transparency", Property::Float(0.)),
             ("Velocity", Property::Vector3(Vector3::new(0., 0., 0.))),
             ("formFactorRaw", Property::Token(1)),
             ("shape", Property::Token(1)),

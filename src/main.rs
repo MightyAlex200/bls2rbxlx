@@ -22,7 +22,7 @@ const SCALE: f32 = 1.;
 const BRICK_HEIGHT: f32 = 1.2;
 
 lazy_static! {
-	// TODO: Cones, invisible bricks, transparent bricks, ramp crests
+	// TODO: Cones, ramp crests
 	static ref TALL_BRICK_RE: Regex = Regex::new(r"(\d+)x(\d+)x(\d+)").unwrap();
 	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"(\d+?)x(\d+)(F| Base)?( Round)?").unwrap();
 	static ref RAMP_BRICK_RE: Regex = Regex::new(r"(-)?(\d+)° Ramp (\d+)x").unwrap();
@@ -32,6 +32,20 @@ lazy_static! {
 fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 64]) -> Vec<Item> {
 	const WEDGE_LIP_SIZE: f32 = 0.15 * SCALE;
 
+	let insert_color = |item: &mut Item| {
+		let color: Color3 = colors[brick.color_index as usize].into();
+		item.properties
+			.insert("Color3uint8".to_string(), Property::Color3(color.clone()));
+		item.properties.insert(
+			"Transparency".to_string(),
+			Property::Float(if !brick.rendering {
+				1.
+			} else {
+				1. - (color.a as f32 / 255.)
+			}),
+		)
+	};
+
 	match get_brick_type(&brick) {
 		BrickType::Regular { cframe, size, mesh } => vec![{
 			let mut item = Item::default("Part".to_string());
@@ -39,10 +53,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 				.insert("size".to_string(), Property::Vector3(size));
 			item.properties
 				.insert("CFrame".to_string(), Property::CFrame(cframe));
-			item.properties.insert(
-				"Color3uint8".to_string(),
-				Property::Color3(colors[brick.color_index as usize].into()),
-			);
+			insert_color(&mut item);
 			if let RegularBrickMesh::Round = mesh {
 				item.children
 					.push(Item::default("CylinderMesh".to_string()))
@@ -72,10 +83,8 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 							) + forward_from_angle(brick.angle) * SCALE * 0.5,
 					),
 				);
-				item.properties.insert(
-					"Color3uint8".to_string(),
-					Property::Color3(colors[brick.color_index as usize].into()),
-				);
+				insert_color(&mut item);
+
 				item
 			},
 			{
@@ -97,10 +106,8 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 							) + forward_from_angle(brick.angle) * SCALE * 0.5,
 					),
 				);
-				item.properties.insert(
-					"Color3uint8".to_string(),
-					Property::Color3(colors[brick.color_index as usize].into()),
-				);
+				insert_color(&mut item);
+
 				item
 			},
 			{
@@ -114,10 +121,8 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 					"CFrame".to_string(),
 					Property::CFrame(cframe - (forward_from_angle(brick.angle) * (size.z / 2.))),
 				);
-				item.properties.insert(
-					"Color3uint8".to_string(),
-					Property::Color3(colors[brick.color_index as usize].into()),
-				);
+				insert_color(&mut item);
+
 				item
 			},
 		],
@@ -151,10 +156,8 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 								+ wedge_offset.clone(),
 						),
 					);
-					item.properties.insert(
-						"Color3uint8".to_string(),
-						Property::Color3(colors[brick.color_index as usize].into()),
-					);
+					insert_color(&mut item);
+
 					item
 				},
 				{
@@ -175,10 +178,8 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 								+ wedge_offset.clone(),
 						),
 					);
-					item.properties.insert(
-						"Color3uint8".to_string(),
-						Property::Color3(colors[brick.color_index as usize].into()),
-					);
+					insert_color(&mut item);
+
 					item
 				},
 				{
@@ -202,10 +203,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 								+ wedge_offset.clone(),
 						),
 					);
-					item.properties.insert(
-						"Color3uint8".to_string(),
-						Property::Color3(colors[brick.color_index as usize].into()),
-					);
+					insert_color(&mut item);
 					item
 				},
 				{
@@ -229,10 +227,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 								+ wedge_offset,
 						),
 					);
-					item.properties.insert(
-						"Color3uint8".to_string(),
-						Property::Color3(colors[brick.color_index as usize].into()),
-					);
+					insert_color(&mut item);
 					item
 				},
 				{
@@ -254,10 +249,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 								),
 						),
 					);
-					item.properties.insert(
-						"Color3uint8".to_string(),
-						Property::Color3(colors[brick.color_index as usize].into()),
-					);
+					insert_color(&mut item);
 					item
 				},
 			]
