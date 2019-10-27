@@ -1,19 +1,23 @@
 #[macro_use]
 extern crate lazy_static;
 
-use bl_save;
-use regex::Regex;
-use std::io::Write;
-use std::{
-	fs::File,
-	io::{BufReader, BufWriter},
-};
-
 mod types;
 mod xml;
 
 use types::{CFrame, Color3, Item, Property, Vector3};
+
+use bl_save;
+use regex::Regex;
+use structopt::StructOpt;
 use xml::*;
+
+use std::{
+	collections::HashSet,
+	fs::File,
+	io::Write,
+	io::{BufReader, BufWriter},
+	path::PathBuf,
+};
 
 const SCALE: f32 = 1.;
 
@@ -27,7 +31,10 @@ lazy_static! {
 	static ref CORNER_RAMP_BRICK_RE: Regex = Regex::new(r"(-)?(\d+)° Ramp Corner").unwrap();
 }
 
-fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 64]) -> Vec<Item> {
+fn items_from_brick(
+	brick: &bl_save::BrickBase,
+	colors: &[(f32, f32, f32, f32); 64],
+) -> Result<Vec<Item>, ()> {
 	const WEDGE_LIP_SIZE: f32 = 0.15 * SCALE;
 
 	let insert_color = |item: &mut Item| {
@@ -45,7 +52,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 	};
 
 	match get_brick_type(&brick) {
-		BrickType::Regular { cframe, size, mesh } => vec![{
+		BrickType::Regular { cframe, size, mesh } => Ok(vec![{
 			let mut item = Item::default("Part".to_string());
 			item.properties
 				.insert("size".to_string(), Property::Vector3(size));
@@ -57,12 +64,12 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 					.push(Item::default("CylinderMesh".to_string()))
 			}
 			item
-		}],
+		}]),
 		BrickType::Ramp {
 			cframe,
 			size,
 			inverted,
-		} => vec![
+		} => Ok(vec![
 			{
 				// Wedge part of ramp
 				let mut item = Item::default("WedgePart".to_string());
@@ -123,7 +130,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 
 				item
 			},
-		],
+		]),
 		BrickType::RampCorner {
 			wedge_cframe_1,
 			wedge_cframe_2,
@@ -133,7 +140,7 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 		} => {
 			let wedge_offset =
 				Vector3::new(0., WEDGE_LIP_SIZE / 2., 0.) * if inverted { -1. } else { 1. };
-			vec![
+			Ok(vec![
 				{
 					// Corner wedge of corner ramp
 					let mut item = Item::default("CornerWedgePart".to_string());
@@ -250,12 +257,9 @@ fn items_from_brick(brick: bl_save::BrickBase, colors: &[(f32, f32, f32, f32); 6
 					insert_color(&mut item);
 					item
 				},
-			]
+			])
 		}
-		BrickType::Unknown => {
-			println!("UNKNOWN BRICK: {:?}", brick);
-			vec![]
-		}
+		BrickType::Unknown => Err(()),
 	}
 }
 
@@ -438,27 +442,62 @@ enum BrickType {
 	Unknown,
 }
 
+#[derive(StructOpt)]
+/// Convert .bls files (Blockland save) to .rbxlx (Roblox save)
+struct Args {
+	#[structopt(parse(from_os_str))]
+	/// File to convert
+	input: PathBuf,
+	#[structopt(parse(from_os_str), default_value = "result.rbxlx")]
+	/// File that will be written to
+	output: PathBuf,
+	#[structopt(short, long)]
+	/// Show no output on the command line
+	quiet: bool,
+}
+
 fn main() {
-	let file = BufReader::new(File::open("ToConvert.bls").unwrap());
+	let args = Args::from_args();
+	let file = BufReader::new(File::open(&args.input).unwrap());
 	let reader = bl_save::Reader::new(file).unwrap();
 	let colors = reader.colors().clone();
 	let num_bricks = reader.brick_count().unwrap();
 
 	let mut items = Vec::<Item>::new();
+	let mut unknown_bricks = HashSet::<String>::new();
 
 	for (i, brick) in reader.into_iter().enumerate() {
 		let brick = brick.unwrap();
-		for item in items_from_brick(brick.base, &colors) {
-			items.push(item);
+		match items_from_brick(&brick.base, &colors) {
+			Ok(new_items) => {
+				for item in new_items {
+					items.push(item);
+				}
+			}
+			Err(()) => {
+				unknown_bricks.insert(brick.base.ui_name);
+			}
 		}
-		println!(
-			"{} bricks processed ({}%)",
-			i,
-			(i + 1) as f32 / num_bricks as f32 * 100.
-		)
+		if !args.quiet {
+			println!(
+				"{} bricks processed ({}%)",
+				i + 1,
+				(i + 1) as f32 / num_bricks as f32 * 100.
+			);
+		}
 	}
 
-	let result_file = File::create("./result.rbxlx").unwrap();
+	if unknown_bricks.len() > 0 && !args.quiet {
+		eprintln!(
+			"!! {} brick types in this file could not be converted !!",
+			unknown_bricks.len()
+		);
+		for unknown_brick in unknown_bricks {
+			eprintln!("Unknown brick type: {}", unknown_brick);
+		}
+	}
+
+	let result_file = File::create(&args.output).unwrap();
 	let mut result_buf = BufWriter::new(result_file);
 	write!(&mut result_buf, "{}", START_XML).unwrap();
 	write!(
