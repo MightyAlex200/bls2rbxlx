@@ -17,6 +17,7 @@ use std::{
 	io::Write,
 	io::{BufReader, BufWriter},
 	path::PathBuf,
+	time::Instant,
 };
 
 const BRICK_HEIGHT: f32 = 1.2;
@@ -469,14 +470,18 @@ struct Args {
 
 fn main() {
 	let args = Args::from_args();
+	let total_start_time = Instant::now();
 	let file = BufReader::new(File::open(&args.input).unwrap());
+	let parse_start_time = Instant::now();
 	let reader = bl_save::Reader::new(file).unwrap();
+	let input_parsed_time = Instant::now();
 	let colors = reader.colors().clone();
 	let num_bricks = reader.brick_count().unwrap();
 
 	let mut items = Vec::<Item>::new();
 	let mut unknown_bricks = HashSet::<String>::new();
 
+	let conversion_start_time = Instant::now();
 	for (i, brick) in reader.into_iter().enumerate() {
 		let brick = brick.unwrap();
 		match items_from_brick(&brick.base, &colors, args.scale) {
@@ -497,6 +502,7 @@ fn main() {
 			);
 		}
 	}
+	let conversion_end_time = Instant::now();
 
 	if unknown_bricks.len() > 0 && !args.quiet {
 		eprintln!(
@@ -522,4 +528,25 @@ fn main() {
 	)
 	.unwrap();
 	write!(&mut result_buf, "{}", END_XML).unwrap();
+	let total_end_time = Instant::now();
+	if !args.quiet {
+		let total_duration = total_end_time.duration_since(total_start_time);
+		let parse_duration = input_parsed_time.duration_since(parse_start_time);
+		let conversion_duration = conversion_end_time.duration_since(conversion_start_time);
+		println!();
+		println!(
+			"Parsed {} bricks in {}ms",
+			num_bricks,
+			parse_duration.as_millis()
+		);
+		println!(
+			"Converted to rbxlx in {}ms",
+			conversion_duration.as_millis()
+		);
+		println!(
+			"Total time (including read/write time): {}s, {}ms",
+			total_duration.as_secs(),
+			total_duration.subsec_millis()
+		);
+	}
 }
