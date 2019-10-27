@@ -3,9 +3,7 @@ extern crate lazy_static;
 
 use bl_save;
 use regex::Regex;
-use std::collections::HashMap;
 use std::io::Write;
-use std::iter::FromIterator;
 use std::{
 	fs::File,
 	io::{BufReader, BufWriter},

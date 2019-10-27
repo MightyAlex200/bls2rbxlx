@@ -258,6 +258,7 @@ impl ToString for Item {
 
 macro_rules! define_property_enum {
     ($($tag:expr => $t:ident($backing:ty);)*) => {
+        #[allow(dead_code)]
         pub enum Property {
             $($t($backing)),*
         }
