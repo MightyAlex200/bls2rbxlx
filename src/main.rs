@@ -460,6 +460,7 @@ struct Args {
 	/// File that will be written to
 	output: PathBuf,
 	#[structopt(short, long, default_value = "1")]
+	/// How many Roblox studs a Blockland unit will correspond to
 	scale: f32,
 	#[structopt(short, long)]
 	/// Show no output on the command line
