@@ -24,11 +24,11 @@ const SCALE: f32 = 1.;
 const BRICK_HEIGHT: f32 = 1.2;
 
 lazy_static! {
-	// TODO: Cones, ramp crests
-	static ref TALL_BRICK_RE: Regex = Regex::new(r"(\d+)x(\d+)x(\d+)").unwrap();
-	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"(\d+?)x(\d+)(F| Base)?( Round)?").unwrap();
-	static ref RAMP_BRICK_RE: Regex = Regex::new(r"(-)?(\d+)° Ramp (\d+)x").unwrap();
-	static ref CORNER_RAMP_BRICK_RE: Regex = Regex::new(r"(-)?(\d+)° Ramp Corner").unwrap();
+	// TODO: Cones, ramp crests, lights, noncollidable bricks
+	static ref TALL_BRICK_RE: Regex = Regex::new(r"^(\d+)x(\d+)x(\d+)(?: Print)?$").unwrap();
+	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"^(\d+?)x(\d+)(F| Base)?( Round)?(?: Print)?$").unwrap();
+	static ref RAMP_BRICK_RE: Regex = Regex::new(r"^(-)?(\d+)° Ramp (\d+)x(?: Print)?$").unwrap();
+	static ref CORNER_RAMP_BRICK_RE: Regex = Regex::new(r"^(-)?(\d+)° Ramp Corner$").unwrap();
 }
 
 fn items_from_brick(
