@@ -2,63 +2,61 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Clone)]
-pub struct Vector3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
+pub struct Vector3(nalgebra::Vector3<f32>);
 
 impl Vector3 {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Vector3 { x, y, z }
+    pub fn new(x: f32, y: f32, z: f32) -> Vector3 {
+        Vector3(nalgebra::Vector3::<f32>::new(x, y, z))
+    }
+
+    pub fn x(&self) -> f32 {
+        self.0.x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.0.y
+    }
+
+    pub fn z(&self) -> f32 {
+        self.0.z
     }
 }
 
 impl std::ops::Add for Vector3 {
-    type Output = Self;
-    fn add(mut self, other: Self) -> Self {
-        self.x += other.x;
-        self.y += other.y;
-        self.z += other.z;
-        self
+    type Output = Vector3;
+
+    fn add(self, other: Vector3) -> Vector3 {
+        Vector3(self.0 + other.0)
     }
 }
 
 impl std::ops::Sub for Vector3 {
-    type Output = Self;
-    fn sub(mut self, other: Self) -> Self {
-        self.x -= other.x;
-        self.y -= other.y;
-        self.z -= other.z;
-        self
+    type Output = Vector3;
+
+    fn sub(self, other: Vector3) -> Vector3 {
+        Vector3(self.0 - other.0)
     }
 }
 
 impl std::ops::Mul<f32> for Vector3 {
-    type Output = Self;
+    type Output = Vector3;
 
-    fn mul(mut self, other: f32) -> Self {
-        self.x *= other;
-        self.y *= other;
-        self.z *= other;
-        self
+    fn mul(self, other: f32) -> Vector3 {
+        Vector3(self.0 * other)
     }
 }
 
-impl std::ops::Mul for Vector3 {
-    type Output = Self;
+impl std::ops::Div<f32> for Vector3 {
+    type Output = Vector3;
 
-    fn mul(mut self, other: Vector3) -> Self {
-        self.x *= other.x;
-        self.y *= other.y;
-        self.z *= other.z;
-        self
+    fn div(self, other: f32) -> Vector3 {
+        Vector3(self.0 / other)
     }
 }
 
 impl ToString for Vector3 {
     fn to_string(&self) -> String {
-        format!("<X>{}</X><Y>{}</Y><Z>{}</Z>", self.x, self.y, self.z)
+        format!("<X>{}</X><Y>{}</Y><Z>{}</Z>", self.0.x, self.0.y, self.0.z)
     }
 }
 
@@ -94,27 +92,17 @@ impl ToString for Color3 {
 
 #[derive(Clone)]
 pub struct CFrame {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub r00: f32,
-    pub r01: f32,
-    pub r02: f32,
-    pub r10: f32,
-    pub r11: f32,
-    pub r12: f32,
-    pub r20: f32,
-    pub r21: f32,
-    pub r22: f32,
+    pub vector: Vector3,
+    pub rotation: nalgebra::Rotation3<f32>,
 }
 
 impl std::ops::Add<Vector3> for CFrame {
     type Output = Self;
 
     fn add(mut self, other: Vector3) -> Self {
-        self.x += other.x;
-        self.y += other.y;
-        self.z += other.z;
+        self.vector.0.x += other.0.x;
+        self.vector.0.y += other.0.y;
+        self.vector.0.z += other.0.z;
         self
     }
 }
@@ -123,9 +111,9 @@ impl std::ops::Sub<Vector3> for CFrame {
     type Output = Self;
 
     fn sub(mut self, other: Vector3) -> Self {
-        self.x -= other.x;
-        self.y -= other.y;
-        self.z -= other.z;
+        self.vector.0.x -= other.0.x;
+        self.vector.0.y -= other.0.y;
+        self.vector.0.z -= other.0.z;
         self
     }
 }
@@ -145,18 +133,18 @@ impl ToString for CFrame {
 <R20>{}</R20>
 <R21>{}</R21>
 <R22>{}</R22>",
-            self.x,
-            self.y,
-            self.z,
-            self.r00,
-            self.r01,
-            self.r02,
-            self.r10,
-            self.r11,
-            self.r12,
-            self.r20,
-            self.r21,
-            self.r22
+            self.vector.0.x,
+            self.vector.0.y,
+            self.vector.0.z,
+            self.rotation[(0, 0)],
+            self.rotation[(0, 1)],
+            self.rotation[(0, 2)],
+            self.rotation[(1, 0)],
+            self.rotation[(1, 1)],
+            self.rotation[(1, 2)],
+            self.rotation[(2, 0)],
+            self.rotation[(2, 1)],
+            self.rotation[(2, 2)]
         )
     }
 }

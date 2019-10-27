@@ -99,7 +99,7 @@ fn items_from_brick(
 				let mut item = Item::default("Part".to_string());
 				item.properties.insert(
 					"size".to_string(),
-					Property::Vector3(Vector3::new(size.x, wedge_lip_size, size.z)),
+					Property::Vector3(Vector3::new(size.x(), wedge_lip_size, size.z())),
 				);
 				item.properties.insert(
 					"CFrame".to_string(),
@@ -107,7 +107,7 @@ fn items_from_brick(
 						cframe.clone()
 							+ Vector3::new(
 								0.,
-								-size.y / if inverted { -2. } else { 2. }
+								-size.y() / if inverted { -2. } else { 2. }
 									+ wedge_lip_size / if inverted { -2. } else { 2. },
 								0.,
 							) + forward_from_angle(brick.angle) * scale * 0.5,
@@ -122,11 +122,11 @@ fn items_from_brick(
 				let mut item = Item::default("Part".to_string());
 				item.properties.insert(
 					"size".to_string(),
-					Property::Vector3(Vector3::new(size.x, size.y, scale)),
+					Property::Vector3(Vector3::new(size.x(), size.y(), scale)),
 				);
 				item.properties.insert(
 					"CFrame".to_string(),
-					Property::CFrame(cframe - (forward_from_angle(brick.angle) * (size.z / 2.))),
+					Property::CFrame(cframe - (forward_from_angle(brick.angle) * (size.z() / 2.))),
 				);
 				insert_color(&mut item);
 
@@ -149,9 +149,9 @@ fn items_from_brick(
 					item.properties.insert(
 						"size".to_string(),
 						Property::Vector3(Vector3::new(
-							size.x - scale,
-							size.y - wedge_lip_size,
-							size.z - scale,
+							size.x() - scale,
+							size.y() - wedge_lip_size,
+							size.z() - scale,
 						)),
 					);
 					item.properties.insert(
@@ -172,15 +172,15 @@ fn items_from_brick(
 					let mut item = Item::default("Part".to_string());
 					item.properties.insert(
 						"size".to_string(),
-						Property::Vector3(Vector3::new(scale, size.y - wedge_lip_size, scale)),
+						Property::Vector3(Vector3::new(scale, size.y() - wedge_lip_size, scale)),
 					);
 					item.properties.insert(
 						"CFrame".to_string(),
 						Property::CFrame(
 							corner_cframe.clone()
-								+ forward_from_angle(brick.angle) * (-size.x / 2.)
+								+ forward_from_angle(brick.angle) * (-size.x() / 2.)
 								+ forward_from_angle(brick.angle) * scale * 0.5
-								+ right_from_angle(brick.angle) * (-size.z / 2.)
+								+ right_from_angle(brick.angle) * (-size.z() / 2.)
 								+ right_from_angle(brick.angle) * scale * 0.5
 								+ wedge_offset.clone(),
 						),
@@ -196,15 +196,15 @@ fn items_from_brick(
 						"size".to_string(),
 						Property::Vector3(Vector3::new(
 							scale,
-							size.y - wedge_lip_size,
-							size.z - scale,
+							size.y() - wedge_lip_size,
+							size.z() - scale,
 						)),
 					);
 					item.properties.insert(
 						"CFrame".to_string(),
 						Property::CFrame(
 							wedge_cframe_1
-								+ forward_from_angle(brick.angle) * (-size.x / 2.)
+								+ forward_from_angle(brick.angle) * (-size.x() / 2.)
 								+ forward_from_angle(brick.angle) * scale * 0.5
 								+ right_from_angle(brick.angle) * scale * 0.5
 								+ wedge_offset.clone(),
@@ -220,8 +220,8 @@ fn items_from_brick(
 						"size".to_string(),
 						Property::Vector3(Vector3::new(
 							scale,
-							size.y - wedge_lip_size,
-							size.z - scale,
+							size.y() - wedge_lip_size,
+							size.z() - scale,
 						)),
 					);
 					item.properties.insert(
@@ -229,7 +229,7 @@ fn items_from_brick(
 						Property::CFrame(
 							wedge_cframe_2
 								+ forward_from_angle(brick.angle) * scale * 0.5
-								+ right_from_angle(brick.angle) * (-size.z / 2.)
+								+ right_from_angle(brick.angle) * (-size.z() / 2.)
 								+ right_from_angle(brick.angle) * scale * 0.5
 								+ wedge_offset,
 						),
@@ -242,7 +242,7 @@ fn items_from_brick(
 					let mut item = Item::default("Part".to_string());
 					item.properties.insert(
 						"size".to_string(),
-						Property::Vector3(Vector3::new(size.x, wedge_lip_size, size.z)),
+						Property::Vector3(Vector3::new(size.x(), wedge_lip_size, size.z())),
 					);
 					item.properties.insert(
 						"CFrame".to_string(),
@@ -250,7 +250,7 @@ fn items_from_brick(
 							corner_cframe
 								+ Vector3::new(
 									0.,
-									size.y / if inverted { 2. } else { -2. }
+									size.y() / if inverted { 2. } else { -2. }
 										+ wedge_lip_size / if inverted { -2. } else { 2. },
 									0.,
 								),
@@ -382,34 +382,23 @@ fn cframe_from_pos_and_rot(pos: (f32, f32, f32), angle: u8, inverted: bool, scal
 	let x = pos.0 * 2. * scale;
 	let y = pos.2 * 2. * scale;
 	let z = -pos.1 * 2. * scale;
-	let (r00, r01, r02, r10, r11, r12, r20, r21, r22) = if inverted {
-		match angle {
-			0 => (-1., 0., -0., 0., -1., -0., -0., -0., 1.),
-			1 => (0., 0., -1., 0., -1., 0., -1., 0., 0.),
-			2 => (1., 0., 0., 0., -1., 0., 0., 0., -1.),
-			_ => (0., 0., 1., 0., -1., 0., 1., 0., 0.),
-		}
-	} else {
-		match angle {
-			0 => (1., 0., 0., 0., 1., 0., 0., 0., 1.),
-			1 => (0., 0., -1., 0., 1., 0., 1., 0., 0.),
-			2 => (-1., 0., 0., 0., 1., 0., 0., 0., -1.),
-			_ => (0., 0., 1., 0., 1., 0., -1., 0., 0.),
-		}
-	};
+	let mut rot = nalgebra::Rotation3::new(nalgebra::Vector3::new(
+		0.,
+		-(angle as f32 * <f32 as nalgebra::RealField>::frac_pi_2()),
+		0.,
+	));
+	rot *= nalgebra::Rotation3::new(nalgebra::Vector3::new(
+		0.,
+		0.,
+		if inverted {
+			<f32 as nalgebra::RealField>::pi()
+		} else {
+			0.
+		},
+	));
 	CFrame {
-		x,
-		y,
-		z,
-		r00,
-		r01,
-		r02,
-		r10,
-		r11,
-		r12,
-		r20,
-		r21,
-		r22,
+		vector: Vector3::new(x, y, z),
+		rotation: rot,
 	}
 }
 
