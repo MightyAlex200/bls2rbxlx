@@ -45,6 +45,17 @@ impl std::ops::Mul<f32> for Vector3 {
     }
 }
 
+impl std::ops::Mul for Vector3 {
+    type Output = Self;
+
+    fn mul(mut self, other: Vector3) -> Self {
+        self.x *= other.x;
+        self.y *= other.y;
+        self.z *= other.z;
+        self
+    }
+}
+
 impl ToString for Vector3 {
     fn to_string(&self) -> String {
         format!("<X>{}</X><Y>{}</Y><Z>{}</Z>", self.x, self.y, self.z)
