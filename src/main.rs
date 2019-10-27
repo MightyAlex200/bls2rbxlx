@@ -273,7 +273,7 @@ fn get_brick_type(brick: &bl_save::BrickBase, scale: f32) -> BrickType {
 			size: Vector3::new(x, y, z) * scale,
 			cframe: cframe_from_pos_and_rot(
 				brick.position,
-				brick.angle + if caps.get(4).is_some() { 1 } else { 0 },
+				(brick.angle + if caps.get(4).is_some() { 1 } else { 0 }) % 4,
 				false,
 				scale,
 			),
