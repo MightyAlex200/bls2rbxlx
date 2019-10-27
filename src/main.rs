@@ -23,7 +23,7 @@ const BRICK_HEIGHT: f32 = 1.2;
 
 lazy_static! {
 	// TODO: Cones, ramp crests, lights, noncollidable bricks
-	static ref TALL_BRICK_RE: Regex = Regex::new(r"^(\d+)x(\d+)x(\d+)(?: Print)?$").unwrap();
+	static ref TALL_BRICK_RE: Regex = Regex::new(r"^(\d+)x(\d+)x(\d+)( Print)?$").unwrap();
 	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"^(\d+?)x(\d+)(F| Base)?( Round)?(?: Print)?$").unwrap();
 	static ref RAMP_BRICK_RE: Regex = Regex::new(r"^(-)?(\d+)° Ramp (\d+)x(?: Print)?$").unwrap();
 	static ref CORNER_RAMP_BRICK_RE: Regex = Regex::new(r"^(-)?(\d+)° Ramp Corner$").unwrap();
@@ -269,7 +269,12 @@ fn get_brick_type(brick: &bl_save::BrickBase, scale: f32) -> BrickType {
 		let y = caps.get(3).unwrap().as_str().parse::<f32>().unwrap() * BRICK_HEIGHT;
 		BrickType::Regular {
 			size: Vector3::new(x, y, z) * scale,
-			cframe: cframe_from_pos_and_rot(brick.position, brick.angle, false, scale),
+			cframe: cframe_from_pos_and_rot(
+				brick.position,
+				brick.angle + if caps.get(4).is_some() { 1 } else { 0 },
+				false,
+				scale,
+			),
 			mesh: RegularBrickMesh::Block,
 		}
 	} else if let Some(caps) = REGULAR_BRICK_RE.captures(&brick.ui_name) {
