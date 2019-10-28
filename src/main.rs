@@ -41,81 +41,105 @@ lazy_static! {
 fn generate_cone_2x2x2(scale: f32, cframe: CFrame, f: impl Fn(&mut Item)) -> Item {
 	let mut item = Item::default("Model".to_string());
 	let cframe = cframe - Vector3::new(0., BRICK_HEIGHT * scale, 0.);
-	for i in 0..CONE_RESOLUTION {
-		let percent = i as f32 / CONE_RESOLUTION as f32;
-		let rot_out = Rotation3::new(NVector3::new(0., percent * TWO_PI, 0.));
+
+	// Helper function for creating sides
+	fn create_wedge(
+		percent: f32,
+		scale: f32,
+		wedge_size: f32,
+		rotation: f32,
+		offset: f32,
+		cframe: &CFrame,
+	) -> (Vector3, CFrame) {
+		let orig_outer_point =
+			Rotation3::new(NVector3::new(0., percent * TWO_PI, 0.)) * Point3::new(0., 0., scale);
+		let orig_inner_point =
+			orig_outer_point * 0.5 + NVector3::new(0., 2. * BRICK_HEIGHT, 0.) * scale;
+		let mid_point = Point3::from((orig_outer_point.coords + orig_inner_point.coords) / 2.);
+
+		let rot_out = Rotation3::new(NVector3::new(0., (percent + offset) * TWO_PI, 0.));
 		let outer_point = rot_out * Point3::new(0., 0., scale);
 		let inner_point = outer_point * 0.5 + NVector3::new(0., 2. * BRICK_HEIGHT, 0.) * scale;
-		let mid_point = Point3::from((outer_point.coords + inner_point.coords) / 2.);
+
 		let towards_inner = inner_point - outer_point;
 		let looking_towards_inner = Rotation3::face_towards(&towards_inner, &NVector3::y());
-		let size = Property::Vector3(Vector3::new(
+		let size = Vector3::new(
 			CONE_WALL_WIDTH * scale,
 			towards_inner.magnitude(),
-			1. / CONE_RESOLUTION as f32 * TWO_PI * scale,
-		));
+			1. / CONE_RESOLUTION as f32 * PI * scale * wedge_size,
+		);
+		let cframe = CFrame {
+			vector: cframe.vector.clone() + Vector3(mid_point.coords),
+			rotation: looking_towards_inner
+				* Rotation3::from_scaled_axis(NVector3::z() * FRAC_PI_2)
+				* Rotation3::from_scaled_axis(NVector3::x() * (FRAC_PI_2 + rotation))
+				* Rotation3::from_scaled_axis(NVector3::y() * offset * PI * PI),
+		};
+		(size, cframe)
+	}
+
+	// Actually all the create sides
+	for i in 0..CONE_RESOLUTION {
+		let percent = i as f32 / CONE_RESOLUTION as f32;
 		let mut wedge1 = Item::default("WedgePart".to_string());
-		wedge1.properties.insert("size".to_string(), size.clone());
-		wedge1.properties.insert(
-			"CFrame".to_string(),
-			Property::CFrame(CFrame {
-				vector: cframe.vector.clone() + Vector3(mid_point.coords),
-				rotation: looking_towards_inner
-					* Rotation3::from_scaled_axis(NVector3::z() * FRAC_PI_2)
-					* Rotation3::from_scaled_axis(NVector3::x() * FRAC_PI_2),
-			}),
-		);
+		let (size1, cframe1) = create_wedge(percent, scale, 2., 0., 0., &cframe);
+		wedge1
+			.properties
+			.insert("size".to_string(), Property::Vector3(size1));
+		wedge1
+			.properties
+			.insert("CFrame".to_string(), Property::CFrame(cframe1));
 		let mut wedge2 = Item::default("WedgePart".to_string());
-		wedge2.properties.insert("size".to_string(), size);
-		wedge2.properties.insert(
-			"CFrame".to_string(),
-			Property::CFrame(CFrame {
-				vector: cframe.vector.clone() + Vector3(mid_point.coords),
-				rotation: looking_towards_inner
-					* Rotation3::from_scaled_axis(NVector3::z() * FRAC_PI_2)
-					* Rotation3::from_scaled_axis(NVector3::x() * (PI + FRAC_PI_2)),
-			}),
-		);
-		let cylinder_mesh = Item::default("CylinderMesh".to_string());
-		let mut cap_bottom = Item::default("Part".to_string());
-		cap_bottom.properties.insert(
-			"size".to_string(),
-			Property::Vector3(Vector3::new(
-				2. * scale,
-				CONE_WALL_WIDTH * scale,
-				2. * scale,
-			)),
-		);
-		cap_bottom.properties.insert(
-			"CFrame".to_string(),
-			Property::CFrame(CFrame {
-				vector: cframe.vector.clone(),
-				rotation: Rotation3::identity(),
-			}),
-		);
-		cap_bottom.children.push(cylinder_mesh.clone());
-		let mut cap_top = Item::default("Part".to_string());
-		cap_top.properties.insert(
-			"size".to_string(),
-			Property::Vector3(Vector3::new(scale, CONE_WALL_WIDTH * scale, scale)),
-		);
-		cap_top.properties.insert(
-			"CFrame".to_string(),
-			Property::CFrame(CFrame {
-				vector: cframe.vector.clone() + Vector3::new(0., 2. * BRICK_HEIGHT * scale, 0.),
-				rotation: Rotation3::identity(),
-			}),
-		);
-		cap_top.children.push(cylinder_mesh.clone());
-		f(&mut cap_bottom);
-		item.children.push(cap_bottom);
-		f(&mut cap_top);
-		item.children.push(cap_top);
+		let (size2, cframe2) =
+			create_wedge(percent, scale, 1., PI, 1. / CONE_RESOLUTION as f32, &cframe);
+		wedge2
+			.properties
+			.insert("size".to_string(), Property::Vector3(size2));
+		wedge2
+			.properties
+			.insert("CFrame".to_string(), Property::CFrame(cframe2));
 		f(&mut wedge1);
 		item.children.push(wedge1);
 		f(&mut wedge2);
 		item.children.push(wedge2);
 	}
+
+	// Create top and bottom of cone
+	let cylinder_mesh = Item::default("CylinderMesh".to_string());
+	let mut cap_bottom = Item::default("Part".to_string());
+	cap_bottom.properties.insert(
+		"size".to_string(),
+		Property::Vector3(Vector3::new(
+			2. * scale,
+			CONE_WALL_WIDTH * scale,
+			2. * scale,
+		)),
+	);
+	cap_bottom.properties.insert(
+		"CFrame".to_string(),
+		Property::CFrame(CFrame {
+			vector: cframe.vector.clone(),
+			rotation: Rotation3::identity(),
+		}),
+	);
+	cap_bottom.children.push(cylinder_mesh.clone());
+	let mut cap_top = Item::default("Part".to_string());
+	cap_top.properties.insert(
+		"size".to_string(),
+		Property::Vector3(Vector3::new(scale, CONE_WALL_WIDTH * scale, scale)),
+	);
+	cap_top.properties.insert(
+		"CFrame".to_string(),
+		Property::CFrame(CFrame {
+			vector: cframe.vector.clone() + Vector3::new(0., 2. * BRICK_HEIGHT * scale, 0.),
+			rotation: Rotation3::identity(),
+		}),
+	);
+	cap_top.children.push(cylinder_mesh.clone());
+	f(&mut cap_bottom);
+	item.children.push(cap_bottom);
+	f(&mut cap_top);
+	item.children.push(cap_top);
 	item
 }
 
