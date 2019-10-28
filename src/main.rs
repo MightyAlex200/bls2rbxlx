@@ -1,20 +1,20 @@
 #[macro_use]
 extern crate lazy_static;
 
+mod specialbricks;
 mod types;
 mod xml;
 
+use specialbricks::SpecialBricksCache;
 use types::{CFrame, Color3, Item, Property, Vector3};
 
 use bl_save;
-use nalgebra::{Point3, Rotation3, Vector3 as NVector3};
 use regex::Regex;
 use structopt::StructOpt;
 use xml::*;
 
 use std::{
 	collections::HashSet,
-	f32::consts::{FRAC_PI_2, PI},
 	fs::File,
 	io::Write,
 	io::{BufReader, BufWriter},
@@ -22,13 +22,11 @@ use std::{
 	time::Instant,
 };
 
-const TWO_PI: f32 = 2. * PI;
+pub const BRICK_HEIGHT: f32 = 1.2;
 
-const BRICK_HEIGHT: f32 = 1.2;
+pub const CONE_RESOLUTION: u8 = 32;
 
-const CONE_RESOLUTION: u8 = 32;
-
-const CONE_WALL_WIDTH: f32 = 0.01;
+pub const CONE_WALL_WIDTH: f32 = 0.01;
 
 lazy_static! {
 	// TODO: Lights, prints
@@ -38,119 +36,37 @@ lazy_static! {
 	static ref CORNER_RAMP_BRICK_RE: Regex = Regex::new(r"^(-)?(\d+)° Ramp Corner$").unwrap();
 }
 
-fn generate_cone_2x2x2(scale: f32, cframe: CFrame, f: impl Fn(&mut Item)) -> Item {
-	let mut item = Item::default("Model".to_string());
-	let cframe = cframe - Vector3::new(0., BRICK_HEIGHT * scale, 0.);
-
-	// Helper function for creating sides
-	fn create_wedge(
-		percent: f32,
-		scale: f32,
-		wedge_size: f32,
-		rotation: f32,
-		offset: f32,
-		cframe: &CFrame,
-	) -> (Vector3, CFrame) {
-		let orig_outer_point =
-			Rotation3::new(NVector3::new(0., percent * TWO_PI, 0.)) * Point3::new(0., 0., scale);
-		let orig_inner_point =
-			orig_outer_point * 0.5 + NVector3::new(0., 2. * BRICK_HEIGHT, 0.) * scale;
-		let mid_point = Point3::from((orig_outer_point.coords + orig_inner_point.coords) / 2.);
-
-		let rot_out = Rotation3::new(NVector3::new(0., (percent + offset) * TWO_PI, 0.));
-		let outer_point = rot_out * Point3::new(0., 0., scale);
-		let inner_point = outer_point * 0.5 + NVector3::new(0., 2. * BRICK_HEIGHT, 0.) * scale;
-
-		let towards_inner = inner_point - outer_point;
-		let looking_towards_inner = Rotation3::face_towards(&towards_inner, &NVector3::y());
-		let size = Vector3::new(
-			CONE_WALL_WIDTH * scale,
-			towards_inner.magnitude(),
-			1. / CONE_RESOLUTION as f32 * PI * scale * wedge_size,
-		);
-		let cframe = CFrame {
-			vector: cframe.vector.clone() + Vector3(mid_point.coords),
-			rotation: looking_towards_inner
-				* Rotation3::from_scaled_axis(NVector3::z() * FRAC_PI_2)
-				* Rotation3::from_scaled_axis(NVector3::x() * (FRAC_PI_2 + rotation))
-				* Rotation3::from_scaled_axis(NVector3::y() * offset * PI * PI),
-		};
-		(size, cframe)
-	}
-
-	// Actually all the create sides
-	for i in 0..CONE_RESOLUTION {
-		let percent = i as f32 / CONE_RESOLUTION as f32;
-		let mut wedge1 = Item::default("WedgePart".to_string());
-		let (size1, cframe1) = create_wedge(percent, scale, 2., 0., 0., &cframe);
-		wedge1
-			.properties
-			.insert("size".to_string(), Property::Vector3(size1));
-		wedge1
-			.properties
-			.insert("CFrame".to_string(), Property::CFrame(cframe1));
-		let mut wedge2 = Item::default("WedgePart".to_string());
-		let (size2, cframe2) =
-			create_wedge(percent, scale, 1., PI, 1. / CONE_RESOLUTION as f32, &cframe);
-		wedge2
-			.properties
-			.insert("size".to_string(), Property::Vector3(size2));
-		wedge2
-			.properties
-			.insert("CFrame".to_string(), Property::CFrame(cframe2));
-		f(&mut wedge1);
-		item.children.push(wedge1);
-		f(&mut wedge2);
-		item.children.push(wedge2);
-	}
-
-	// Create top and bottom of cone
-	let cylinder_mesh = Item::default("CylinderMesh".to_string());
-	let mut cap_bottom = Item::default("Part".to_string());
-	cap_bottom.properties.insert(
-		"size".to_string(),
-		Property::Vector3(Vector3::new(
-			2. * scale,
-			CONE_WALL_WIDTH * scale,
-			2. * scale,
-		)),
-	);
-	cap_bottom.properties.insert(
-		"CFrame".to_string(),
-		Property::CFrame(CFrame {
-			vector: cframe.vector.clone(),
-			rotation: Rotation3::identity(),
-		}),
-	);
-	cap_bottom.children.push(cylinder_mesh.clone());
-	let mut cap_top = Item::default("Part".to_string());
-	cap_top.properties.insert(
-		"size".to_string(),
-		Property::Vector3(Vector3::new(scale, CONE_WALL_WIDTH * scale, scale)),
-	);
-	cap_top.properties.insert(
-		"CFrame".to_string(),
-		Property::CFrame(CFrame {
-			vector: cframe.vector.clone() + Vector3::new(0., 2. * BRICK_HEIGHT * scale, 0.),
-			rotation: Rotation3::identity(),
-		}),
-	);
-	cap_top.children.push(cylinder_mesh.clone());
-	f(&mut cap_bottom);
-	item.children.push(cap_bottom);
-	f(&mut cap_top);
-	item.children.push(cap_top);
-	item
-}
-
 fn items_from_brick(
 	brick: &bl_save::BrickBase,
 	colors: &[(f32, f32, f32, f32); 64],
 	scale: f32,
+	cache: &mut SpecialBricksCache,
 ) -> Result<Vec<Item>, ()> {
 	let wedge_lip_size: f32 = 0.15 * scale;
 
-	let insert_basics = |item: &mut Item| {
+	fn apply_size_and_cframe(cframe: &CFrame, size: &Vector3, item: &mut Item) {
+		item.properties
+			.entry("size".to_string())
+			.and_modify(|s| match s {
+				Property::Vector3(v) => *v = size.clone() * v.clone(),
+				_ => unreachable!(),
+			});
+		item.properties
+			.entry("CFrame".to_string())
+			.and_modify(|c| match c {
+				Property::CFrame(ci) => *ci = ci.clone() + cframe.clone(),
+				_ => unreachable!(),
+			});
+		for child in item.children.iter_mut() {
+			apply_size_and_cframe(cframe, size, child);
+		}
+	}
+
+	fn insert_basics(
+		brick: &bl_save::BrickBase,
+		colors: &[(f32, f32, f32, f32); 64],
+		item: &mut Item,
+	) {
 		let color: Color3 = colors[brick.color_index as usize].into();
 		item.properties
 			.insert("Color3uint8".to_string(), Property::Color3(color.clone()));
@@ -164,7 +80,10 @@ fn items_from_brick(
 		);
 		item.properties
 			.insert("CanCollide".to_string(), Property::Bool(brick.collision));
-	};
+		for child in item.children.iter_mut() {
+			insert_basics(brick, colors, child);
+		}
+	}
 
 	match get_brick_type(&brick, scale) {
 		BrickType::Regular { cframe, size, mesh } => Ok(vec![{
@@ -173,7 +92,7 @@ fn items_from_brick(
 				.insert("size".to_string(), Property::Vector3(size));
 			item.properties
 				.insert("CFrame".to_string(), Property::CFrame(cframe));
-			insert_basics(&mut item);
+			insert_basics(&brick, &colors, &mut item);
 			if let RegularBrickMesh::Round = mesh {
 				item.children
 					.push(Item::default("CylinderMesh".to_string()))
@@ -203,7 +122,7 @@ fn items_from_brick(
 							) + forward_from_angle(brick.angle) * scale * 0.5,
 					),
 				);
-				insert_basics(&mut item);
+				insert_basics(&brick, &colors, &mut item);
 
 				item
 			},
@@ -226,7 +145,7 @@ fn items_from_brick(
 							) + forward_from_angle(brick.angle) * scale * 0.5,
 					),
 				);
-				insert_basics(&mut item);
+				insert_basics(&brick, &colors, &mut item);
 
 				item
 			},
@@ -241,7 +160,7 @@ fn items_from_brick(
 					"CFrame".to_string(),
 					Property::CFrame(cframe - (forward_from_angle(brick.angle) * (size.z() / 2.))),
 				);
-				insert_basics(&mut item);
+				insert_basics(&brick, &colors, &mut item);
 
 				item
 			},
@@ -276,7 +195,7 @@ fn items_from_brick(
 								+ wedge_offset.clone(),
 						),
 					);
-					insert_basics(&mut item);
+					insert_basics(&brick, &colors, &mut item);
 
 					item
 				},
@@ -298,7 +217,7 @@ fn items_from_brick(
 								+ wedge_offset.clone(),
 						),
 					);
-					insert_basics(&mut item);
+					insert_basics(&brick, &colors, &mut item);
 
 					item
 				},
@@ -323,7 +242,7 @@ fn items_from_brick(
 								+ wedge_offset.clone(),
 						),
 					);
-					insert_basics(&mut item);
+					insert_basics(&brick, &colors, &mut item);
 					item
 				},
 				{
@@ -347,7 +266,7 @@ fn items_from_brick(
 								+ wedge_offset,
 						),
 					);
-					insert_basics(&mut item);
+					insert_basics(&brick, &colors, &mut item);
 					item
 				},
 				{
@@ -369,7 +288,7 @@ fn items_from_brick(
 								),
 						),
 					);
-					insert_basics(&mut item);
+					insert_basics(&brick, &colors, &mut item);
 					item
 				},
 			])
@@ -377,11 +296,14 @@ fn items_from_brick(
 		BrickType::Unknown => match brick.ui_name.as_str() {
 			// Special bricks
 			// TODO: Ramp crests, Vehicle spawn, small cone, spawn, roads
-			"2x2x2 Cone" => Ok(vec![generate_cone_2x2x2(
-				scale,
-				cframe_from_pos_and_rot(brick.position, brick.angle, false, scale),
-				insert_basics,
-			)]),
+			"2x2x2 Cone" => {
+				let mut cone = cache.cone2x2x2();
+				let cframe = cframe_from_pos_and_rot(brick.position, brick.angle, false, scale);
+				let size = Vector3::new(1., 1., 1.) * scale;
+				apply_size_and_cframe(&cframe, &size, &mut cone);
+				insert_basics(&brick, &colors, &mut cone);
+				Ok(vec![cone.clone()])
+			}
 			_ => Err(()),
 		},
 	}
@@ -593,6 +515,7 @@ fn main() {
 	let input_parsed_time = Instant::now();
 	let colors = reader.colors().clone();
 	let num_bricks = reader.brick_count().unwrap();
+	let mut cache = SpecialBricksCache::new();
 
 	let mut items = Vec::<Item>::new();
 	let mut unknown_bricks = HashSet::<String>::new();
@@ -600,7 +523,7 @@ fn main() {
 	let conversion_start_time = Instant::now();
 	for (i, brick) in reader.into_iter().enumerate() {
 		let brick = brick.unwrap();
-		match items_from_brick(&brick.base, &colors, args.scale) {
+		match items_from_brick(&brick.base, &colors, args.scale, &mut cache) {
 			Ok(new_items) => {
 				for item in new_items {
 					items.push(item);

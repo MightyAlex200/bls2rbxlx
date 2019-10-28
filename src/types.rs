@@ -38,6 +38,17 @@ impl std::ops::Sub for Vector3 {
     }
 }
 
+impl std::ops::Mul for Vector3 {
+    type Output = Vector3;
+
+    fn mul(mut self, other: Vector3) -> Vector3 {
+        self.0.x *= other.0.x;
+        self.0.y *= other.0.y;
+        self.0.z *= other.0.z;
+        self
+    }
+}
+
 impl std::ops::Mul<f32> for Vector3 {
     type Output = Vector3;
 
@@ -94,6 +105,17 @@ impl ToString for Color3 {
 pub struct CFrame {
     pub vector: Vector3,
     pub rotation: nalgebra::Rotation3<f32>,
+}
+
+impl std::ops::Add for CFrame {
+    type Output = Self;
+
+    fn add(mut self, other: CFrame) -> Self {
+        self.vector.0.x += other.vector.0.x;
+        self.vector.0.y += other.vector.0.y;
+        self.vector.0.z += other.vector.0.z;
+        self
+    }
 }
 
 impl std::ops::Add<Vector3> for CFrame {
