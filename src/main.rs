@@ -150,7 +150,7 @@ fn items_from_brick(
 ) -> Result<Vec<Item>, ()> {
 	let wedge_lip_size: f32 = 0.15 * scale;
 
-	let insert_color = |item: &mut Item| {
+	let insert_basics = |item: &mut Item| {
 		let color: Color3 = colors[brick.color_index as usize].into();
 		item.properties
 			.insert("Color3uint8".to_string(), Property::Color3(color.clone()));
@@ -173,7 +173,7 @@ fn items_from_brick(
 				.insert("size".to_string(), Property::Vector3(size));
 			item.properties
 				.insert("CFrame".to_string(), Property::CFrame(cframe));
-			insert_color(&mut item);
+			insert_basics(&mut item);
 			if let RegularBrickMesh::Round = mesh {
 				item.children
 					.push(Item::default("CylinderMesh".to_string()))
@@ -203,7 +203,7 @@ fn items_from_brick(
 							) + forward_from_angle(brick.angle) * scale * 0.5,
 					),
 				);
-				insert_color(&mut item);
+				insert_basics(&mut item);
 
 				item
 			},
@@ -226,7 +226,7 @@ fn items_from_brick(
 							) + forward_from_angle(brick.angle) * scale * 0.5,
 					),
 				);
-				insert_color(&mut item);
+				insert_basics(&mut item);
 
 				item
 			},
@@ -241,7 +241,7 @@ fn items_from_brick(
 					"CFrame".to_string(),
 					Property::CFrame(cframe - (forward_from_angle(brick.angle) * (size.z() / 2.))),
 				);
-				insert_color(&mut item);
+				insert_basics(&mut item);
 
 				item
 			},
@@ -276,7 +276,7 @@ fn items_from_brick(
 								+ wedge_offset.clone(),
 						),
 					);
-					insert_color(&mut item);
+					insert_basics(&mut item);
 
 					item
 				},
@@ -298,7 +298,7 @@ fn items_from_brick(
 								+ wedge_offset.clone(),
 						),
 					);
-					insert_color(&mut item);
+					insert_basics(&mut item);
 
 					item
 				},
@@ -323,7 +323,7 @@ fn items_from_brick(
 								+ wedge_offset.clone(),
 						),
 					);
-					insert_color(&mut item);
+					insert_basics(&mut item);
 					item
 				},
 				{
@@ -347,7 +347,7 @@ fn items_from_brick(
 								+ wedge_offset,
 						),
 					);
-					insert_color(&mut item);
+					insert_basics(&mut item);
 					item
 				},
 				{
@@ -369,7 +369,7 @@ fn items_from_brick(
 								),
 						),
 					);
-					insert_color(&mut item);
+					insert_basics(&mut item);
 					item
 				},
 			])
@@ -380,7 +380,7 @@ fn items_from_brick(
 			"2x2x2 Cone" => Ok(vec![generate_cone_2x2x2(
 				scale,
 				cframe_from_pos_and_rot(brick.position, brick.angle, false, scale),
-				insert_color,
+				insert_basics,
 			)]),
 			_ => Err(()),
 		},
