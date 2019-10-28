@@ -96,7 +96,7 @@ fn generate_cone_2x2x2() -> Item {
             rotation: Rotation3::identity(),
         }),
     );
-    cap_top.children.push(cylinder_mesh.clone());
+    cap_top.children.push(cylinder_mesh);
     item.children.push(cap_bottom);
     item.children.push(cap_top);
     item

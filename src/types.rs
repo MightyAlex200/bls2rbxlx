@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use uuid::Uuid;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Vector3(pub nalgebra::Vector3<f32>);
 
 impl Vector3 {
@@ -49,6 +49,14 @@ impl std::ops::Mul for Vector3 {
     }
 }
 
+impl std::ops::MulAssign for Vector3 {
+    fn mul_assign(&mut self, other: Vector3) {
+        self.0.x *= other.0.x;
+        self.0.y *= other.0.y;
+        self.0.z *= other.0.z;
+    }
+}
+
 impl std::ops::Mul<f32> for Vector3 {
     type Output = Vector3;
 
@@ -71,7 +79,7 @@ impl ToString for Vector3 {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Color3 {
     pub r: u8,
     pub g: u8,
@@ -81,12 +89,12 @@ pub struct Color3 {
 
 impl From<(f32, f32, f32, f32)> for Color3 {
     fn from((r, g, b, a): (f32, f32, f32, f32)) -> Color3 {
-        let f = |v| (v * 255.) as u8;
+        let convert = |v| (v * 255.) as u8;
         Color3 {
-            r: f(r),
-            g: f(g),
-            b: f(b),
-            a: f(a),
+            r: convert(r),
+            g: convert(g),
+            b: convert(b),
+            a: convert(a),
         }
     }
 }
@@ -101,7 +109,7 @@ impl ToString for Color3 {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct CFrame {
     pub vector: Vector3,
     pub rotation: nalgebra::Rotation3<f32>,
@@ -115,6 +123,14 @@ impl std::ops::Add for CFrame {
         self.vector.0.y += other.vector.0.y;
         self.vector.0.z += other.vector.0.z;
         self
+    }
+}
+
+impl std::ops::AddAssign for CFrame {
+    fn add_assign(&mut self, other: CFrame) {
+        self.vector.0.x += other.vector.0.x;
+        self.vector.0.y += other.vector.0.y;
+        self.vector.0.z += other.vector.0.z;
     }
 }
 
@@ -171,7 +187,7 @@ impl ToString for CFrame {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct PhysicalProperties(pub bool);
 
 impl ToString for PhysicalProperties {

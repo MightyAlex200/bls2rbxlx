@@ -48,13 +48,13 @@ fn items_from_brick(
 		item.properties
 			.entry("size".to_string())
 			.and_modify(|s| match s {
-				Property::Vector3(v) => *v = size.clone() * v.clone(),
+				Property::Vector3(v) => *v *= *size,
 				_ => unreachable!(),
 			});
 		item.properties
 			.entry("CFrame".to_string())
 			.and_modify(|c| match c {
-				Property::CFrame(ci) => *ci = ci.clone() + cframe.clone(),
+				Property::CFrame(ci) => *ci += *cframe,
 				_ => unreachable!(),
 			});
 		for child in item.children.iter_mut() {
@@ -69,7 +69,7 @@ fn items_from_brick(
 	) {
 		let color: Color3 = colors[brick.color_index as usize].into();
 		item.properties
-			.insert("Color3uint8".to_string(), Property::Color3(color.clone()));
+			.insert("Color3uint8".to_string(), Property::Color3(color));
 		item.properties.insert(
 			"Transparency".to_string(),
 			Property::Float(if !brick.rendering {
@@ -109,12 +109,12 @@ fn items_from_brick(
 				let mut item = Item::default("WedgePart".to_string());
 				item.properties.insert(
 					"size".to_string(),
-					Property::Vector3(size.clone() - Vector3::new(0., wedge_lip_size, 0.)),
+					Property::Vector3(size - Vector3::new(0., wedge_lip_size, 0.)),
 				);
 				item.properties.insert(
 					"CFrame".to_string(),
 					Property::CFrame(
-						cframe.clone()
+						cframe
 							+ Vector3::new(
 								0.,
 								wedge_lip_size / if inverted { -2. } else { 2. },
@@ -136,7 +136,7 @@ fn items_from_brick(
 				item.properties.insert(
 					"CFrame".to_string(),
 					Property::CFrame(
-						cframe.clone()
+						cframe
 							+ Vector3::new(
 								0.,
 								-size.y() / if inverted { -2. } else { 2. }
@@ -189,10 +189,10 @@ fn items_from_brick(
 					item.properties.insert(
 						"CFrame".to_string(),
 						Property::CFrame(
-							corner_cframe.clone()
+							corner_cframe
 								+ forward_from_angle(brick.angle) * scale * 0.5
 								+ right_from_angle(brick.angle) * scale * 0.5
-								+ wedge_offset.clone(),
+								+ wedge_offset,
 						),
 					);
 					insert_basics(&brick, &colors, &mut item);
@@ -209,12 +209,12 @@ fn items_from_brick(
 					item.properties.insert(
 						"CFrame".to_string(),
 						Property::CFrame(
-							corner_cframe.clone()
+							corner_cframe
 								+ forward_from_angle(brick.angle) * (-size.x() / 2.)
 								+ forward_from_angle(brick.angle) * scale * 0.5
 								+ right_from_angle(brick.angle) * (-size.z() / 2.)
 								+ right_from_angle(brick.angle) * scale * 0.5
-								+ wedge_offset.clone(),
+								+ wedge_offset,
 						),
 					);
 					insert_basics(&brick, &colors, &mut item);
@@ -239,7 +239,7 @@ fn items_from_brick(
 								+ forward_from_angle(brick.angle) * (-size.x() / 2.)
 								+ forward_from_angle(brick.angle) * scale * 0.5
 								+ right_from_angle(brick.angle) * scale * 0.5
-								+ wedge_offset.clone(),
+								+ wedge_offset,
 						),
 					);
 					insert_basics(&brick, &colors, &mut item);
@@ -302,7 +302,7 @@ fn items_from_brick(
 				let size = Vector3::new(1., 1., 1.) * scale;
 				apply_size_and_cframe(&cframe, &size, &mut cone);
 				insert_basics(&brick, &colors, &mut cone);
-				Ok(vec![cone.clone()])
+				Ok(vec![cone])
 			}
 			_ => Err(()),
 		},
@@ -327,7 +327,7 @@ fn get_brick_type(brick: &bl_save::BrickBase, scale: f32) -> BrickType {
 	} else if let Some(caps) = REGULAR_BRICK_RE.captures(&brick.ui_name) {
 		let x: f32 = caps.get(1).unwrap().as_str().parse().unwrap(); // These will never panic, check the RE
 		let z: f32 = caps.get(2).unwrap().as_str().parse().unwrap();
-		let y = if let Some(_) = caps.get(3) {
+		let y = if caps.get(3).is_some() {
 			0.4
 		} else {
 			BRICK_HEIGHT
@@ -513,7 +513,7 @@ fn main() {
 	let parse_start_time = Instant::now();
 	let reader = bl_save::Reader::new(file).unwrap();
 	let input_parsed_time = Instant::now();
-	let colors = reader.colors().clone();
+	let colors = *reader.colors();
 	let num_bricks = reader.brick_count().unwrap();
 	let mut cache = SpecialBricksCache::new();
 
@@ -521,7 +521,7 @@ fn main() {
 	let mut unknown_bricks = HashSet::<String>::new();
 
 	let conversion_start_time = Instant::now();
-	for (i, brick) in reader.into_iter().enumerate() {
+	for (i, brick) in reader.enumerate() {
 		let brick = brick.unwrap();
 		match items_from_brick(&brick.base, &colors, args.scale, &mut cache) {
 			Ok(new_items) => {
@@ -543,7 +543,7 @@ fn main() {
 	}
 	let conversion_end_time = Instant::now();
 
-	if unknown_bricks.len() > 0 && !args.quiet {
+	if !unknown_bricks.is_empty() && !args.quiet {
 		eprintln!(
 			"!! {} brick types in this file could not be converted !!",
 			unknown_bricks.len()
