@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Clone)]
-pub struct Vector3(nalgebra::Vector3<f32>);
+pub struct Vector3(pub nalgebra::Vector3<f32>);
 
 impl Vector3 {
     pub fn new(x: f32, y: f32, z: f32) -> Vector3 {
@@ -149,6 +149,7 @@ impl ToString for CFrame {
     }
 }
 
+#[derive(Clone)]
 pub struct PhysicalProperties(pub bool);
 
 impl ToString for PhysicalProperties {
@@ -157,6 +158,7 @@ impl ToString for PhysicalProperties {
     }
 }
 
+#[derive(Clone)]
 pub struct RbxUuid(pub Uuid);
 
 impl ToString for RbxUuid {
@@ -167,6 +169,7 @@ impl ToString for RbxUuid {
     }
 }
 
+#[derive(Clone)]
 pub struct Item {
     pub class: String,
     pub referent: RbxUuid,
@@ -246,6 +249,7 @@ impl ToString for Item {
 macro_rules! define_property_enum {
     ($($tag:expr => $t:ident($backing:ty);)*) => {
         #[allow(dead_code)]
+        #[derive(Clone)]
         pub enum Property {
             $($t($backing)),*
         }
