@@ -331,6 +331,12 @@ fn items_from_brick(
 					insert_basics(&brick, &colors, &mut spawn);
 					Ok(vec![spawn])
 				}
+				"1x4x5 Window" => {
+					let mut window = cache.window_1x4x3();
+					apply_size_and_cframe(&cframe, &size, &mut window);
+					insert_basics(&brick, &colors, &mut window);
+					Ok(vec![window])
+				}
 				_ => Err(()),
 			}
 		}

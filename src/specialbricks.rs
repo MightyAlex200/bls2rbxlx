@@ -7,12 +7,14 @@ use std::f32::consts::{FRAC_PI_2, PI};
 pub const TWO_PI: f32 = 2. * PI;
 
 pub const SPAWN_HEIGHT: f32 = 0.2;
+pub const WINDOW_RIM_WIDTH: f32 = 0.1;
 
 pub struct SpecialBricksCache {
     cone2x2x2: Option<Item>,
     cone1x1: Option<Item>,
     castle_wall: Option<Item>,
     spawn_point: Option<Item>,
+    window_1x4x3: Option<Item>,
 }
 
 fn generate_cone(cone_size: f32) -> Item {
@@ -234,6 +236,78 @@ fn generate_spawn_point() -> Item {
     model
 }
 
+fn generate_window() -> Item {
+    let mut model = Item::default("Model".to_string());
+
+    fn create_horizontal(ypos: f32) -> Item {
+        let mut part = Item::default("Part".to_string());
+        part.properties.insert(
+            "size".to_string(),
+            Property::Vector3(Vector3::new(4., WINDOW_RIM_WIDTH * BRICK_HEIGHT, 1.)),
+        );
+        part.properties.insert(
+            "CFrame".to_string(),
+            Property::CFrame(CFrame {
+                vector: Vector3::new(0., ypos, 0.),
+                rotation: Rotation3::identity(),
+            }),
+        );
+        part
+    }
+
+    fn create_vertical(xpos: f32) -> Item {
+        let mut part = Item::default("Part".to_string());
+        part.properties.insert(
+            "size".to_string(),
+            Property::Vector3(Vector3::new(
+                WINDOW_RIM_WIDTH,
+                (5. - WINDOW_RIM_WIDTH * 2.) * BRICK_HEIGHT,
+                1.,
+            )),
+        );
+        part.properties.insert(
+            "CFrame".to_string(),
+            Property::CFrame(CFrame {
+                vector: Vector3::new(xpos, 0., 0.),
+                rotation: Rotation3::identity(),
+            }),
+        );
+        part
+    }
+
+    let top = create_horizontal((5. - WINDOW_RIM_WIDTH) * BRICK_HEIGHT / 2.);
+    let bottom = create_horizontal((-5. + WINDOW_RIM_WIDTH) * BRICK_HEIGHT / 2.);
+    let left = create_vertical((4. - WINDOW_RIM_WIDTH) / 2.);
+    let right = create_vertical((-4. + WINDOW_RIM_WIDTH) / 2.);
+
+    let mut window = Item::default("Part".to_string());
+    window.properties.insert(
+        "size".to_string(),
+        Property::Vector3(Vector3::new(
+            4. - WINDOW_RIM_WIDTH * 2.,
+            (5. - WINDOW_RIM_WIDTH * 2.) * BRICK_HEIGHT,
+            1.,
+        )),
+    );
+    window.properties.insert(
+        "CFrame".to_string(),
+        Property::CFrame(CFrame {
+            vector: Vector3::new(0., 0., 0.),
+            rotation: Rotation3::identity(),
+        }),
+    );
+    window
+        .properties
+        .insert("Transparency".to_string(), Property::Float(0.5));
+
+    model.children.push(bottom);
+    model.children.push(top);
+    model.children.push(left);
+    model.children.push(right);
+    model.children.push(window);
+    model
+}
+
 impl SpecialBricksCache {
     pub fn new() -> Self {
         SpecialBricksCache {
@@ -241,6 +315,7 @@ impl SpecialBricksCache {
             cone1x1: None,
             castle_wall: None,
             spawn_point: None,
+            window_1x4x3: None,
         }
     }
 
@@ -284,6 +359,17 @@ impl SpecialBricksCache {
                 let spawn = generate_spawn_point();
                 self.spawn_point = Some(spawn.clone());
                 spawn
+            }
+        }
+    }
+
+    pub fn window_1x4x3(&mut self) -> Item {
+        match &self.window_1x4x3 {
+            Some(window) => window.clone(),
+            None => {
+                let window = generate_window();
+                self.window_1x4x3 = Some(window.clone());
+                window
             }
         }
     }
