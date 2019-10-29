@@ -134,6 +134,14 @@ impl std::ops::AddAssign for CFrame {
     }
 }
 
+impl std::ops::MulAssign<Vector3> for CFrame {
+    fn mul_assign(&mut self, other: Vector3) {
+        self.vector.0.x *= other.0.x;
+        self.vector.0.y *= other.0.y;
+        self.vector.0.z *= other.0.z;
+    }
+}
+
 impl std::ops::Add<Vector3> for CFrame {
     type Output = Self;
 

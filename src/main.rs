@@ -54,7 +54,10 @@ fn items_from_brick(
 		item.properties
 			.entry("CFrame".to_string())
 			.and_modify(|c| match c {
-				Property::CFrame(ci) => *ci += *cframe,
+				Property::CFrame(ci) => {
+					*ci *= *size;
+					*ci += *cframe;
+				}
 				_ => unreachable!(),
 			});
 		for child in item.children.iter_mut() {
