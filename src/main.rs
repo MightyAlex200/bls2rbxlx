@@ -36,6 +36,7 @@ lazy_static! {
 	static ref REGULAR_BRICK_RE: Regex = Regex::new(r"^(\d+?)x(\d+)(F| Base)?( Round)?( Print)?$").unwrap();
 	static ref RAMP_BRICK_RE: Regex = Regex::new(r"^(-)?(\d+)° Ramp (\d+)x(?: Print)?$").unwrap();
 	static ref CORNER_RAMP_BRICK_RE: Regex = Regex::new(r"^(-)?(\d+)° Ramp Corner$").unwrap();
+	static ref CREST_BRICK_RE: Regex = Regex::new(r"(25|45)° Crest (\d)x").unwrap();
 }
 
 fn items_from_brick(
@@ -339,12 +340,6 @@ fn items_from_brick(
 					insert_basics(&brick, &colors, &mut window);
 					Ok(vec![window])
 				}
-				"25° Crest 1x" => {
-					let mut crest = cache.crest_1x_25();
-					apply_size_and_cframe(&cframe, &size, &mut crest);
-					insert_basics(&brick, &colors, &mut crest);
-					Ok(vec![crest])
-				}
 				"25° Crest Corner" => {
 					let mut crest = cache.crest_corner_25();
 					apply_size_and_cframe(&cframe, &size, &mut crest);
@@ -353,12 +348,6 @@ fn items_from_brick(
 				}
 				"25° Crest End" => {
 					let mut crest = cache.crest_end_25();
-					apply_size_and_cframe(&cframe, &size, &mut crest);
-					insert_basics(&brick, &colors, &mut crest);
-					Ok(vec![crest])
-				}
-				"45° Crest 1x" => {
-					let mut crest = cache.crest_1x_45();
 					apply_size_and_cframe(&cframe, &size, &mut crest);
 					insert_basics(&brick, &colors, &mut crest);
 					Ok(vec![crest])
@@ -375,7 +364,19 @@ fn items_from_brick(
 					insert_basics(&brick, &colors, &mut crest);
 					Ok(vec![crest])
 				}
-				_ => Err(()),
+				_ => {
+					if let Some(caps) = CREST_BRICK_RE.captures(&brick.ui_name) {
+						let height = caps.get(1).unwrap().as_str();
+						let height = if height == "25" { 2. / 3. } else { 1. };
+						let length = caps.get(2).unwrap().as_str().parse::<u8>().unwrap();
+						let mut crest = specialbricks::generate_crest(height, length);
+						apply_size_and_cframe(&cframe, &size, &mut crest);
+						insert_basics(&brick, &colors, &mut crest);
+						Ok(vec![crest])
+					} else {
+						Err(())
+					}
+				}
 			}
 		}
 	}

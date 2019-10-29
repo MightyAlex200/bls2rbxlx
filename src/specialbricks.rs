@@ -15,10 +15,8 @@ pub struct SpecialBricksCache {
     castle_wall: Option<Item>,
     spawn_point: Option<Item>,
     window_1x4x3: Option<Item>,
-    crest_1x_25: Option<Item>,
     crest_corner_25: Option<Item>,
     crest_end_25: Option<Item>,
-    crest_1x_45: Option<Item>,
     crest_corner_45: Option<Item>,
     crest_end_45: Option<Item>,
 }
@@ -330,18 +328,18 @@ fn generate_crest_lip(x: f32, z: f32) -> Item {
     lip
 }
 
-fn generate_crest(height: f32) -> Item {
+pub fn generate_crest(height: f32, length: u8) -> Item {
     let mut model = Item::default("Model".to_string());
 
-    let lip = generate_crest_lip(1., 2.);
+    let lip = generate_crest_lip(length as f32, 2.);
 
-    fn generate_wedge(z: f32, yrot: f32, height: f32) -> Item {
+    fn generate_wedge(z: f32, yrot: f32, height: f32, length: u8) -> Item {
         let mut wedge = Item::default("WedgePart".to_string());
 
         wedge.properties.insert(
             "size".to_string(),
             Property::Vector3(Vector3::new(
-                1.,
+                length as f32,
                 (height - WEDGE_LIP_SIZE) * BRICK_HEIGHT,
                 1.,
             )),
@@ -357,8 +355,8 @@ fn generate_crest(height: f32) -> Item {
         wedge
     }
 
-    let wedge_1 = generate_wedge(0.5, PI, height);
-    let wedge_2 = generate_wedge(-0.5, 0., height);
+    let wedge_1 = generate_wedge(0.5, PI, height, length);
+    let wedge_2 = generate_wedge(-0.5, 0., height, length);
 
     model.children.push(wedge_1);
     model.children.push(wedge_2);
@@ -471,10 +469,8 @@ impl SpecialBricksCache {
             castle_wall: None,
             spawn_point: None,
             window_1x4x3: None,
-            crest_1x_25: None,
             crest_corner_25: None,
             crest_end_25: None,
-            crest_1x_45: None,
             crest_corner_45: None,
             crest_end_45: None,
         }
@@ -535,17 +531,6 @@ impl SpecialBricksCache {
         }
     }
 
-    pub fn crest_1x_25(&mut self) -> Item {
-        match &self.crest_1x_25 {
-            Some(crest) => crest.clone(),
-            None => {
-                let crest = generate_crest(2. / 3.);
-                self.crest_1x_25 = Some(crest.clone());
-                crest
-            }
-        }
-    }
-
     pub fn crest_corner_25(&mut self) -> Item {
         match &self.crest_corner_25 {
             Some(crest) => crest.clone(),
@@ -563,17 +548,6 @@ impl SpecialBricksCache {
             None => {
                 let crest = generate_crest_end(2. / 3.);
                 self.crest_end_25 = Some(crest.clone());
-                crest
-            }
-        }
-    }
-
-    pub fn crest_1x_45(&mut self) -> Item {
-        match &self.crest_1x_45 {
-            Some(crest) => crest.clone(),
-            None => {
-                let crest = generate_crest(1.);
-                self.crest_1x_45 = Some(crest.clone());
                 crest
             }
         }
