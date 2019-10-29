@@ -72,17 +72,21 @@ fn items_from_brick(
 	) {
 		let color: Color3 = colors[brick.color_index as usize].into();
 		item.properties
-			.insert("Color3uint8".to_string(), Property::Color3(color));
-		item.properties.insert(
-			"Transparency".to_string(),
-			Property::Float(if !brick.rendering {
-				1.
-			} else {
-				1. - (color.a as f32 / 255.)
-			}),
-		);
+			.entry("Color3uint8".to_string())
+			.or_insert(Property::Color3(color));
+		if !item.properties.contains_key("Transparency") || !brick.rendering {
+			item.properties.insert(
+				"Transparency".to_string(),
+				Property::Float(if !brick.rendering {
+					1.
+				} else {
+					1. - (color.a as f32 / 255.)
+				}),
+			);
+		}
 		item.properties
-			.insert("CanCollide".to_string(), Property::Bool(brick.collision));
+			.entry("CanCollide".to_string())
+			.or_insert(Property::Bool(brick.collision));
 		for child in item.children.iter_mut() {
 			insert_basics(brick, colors, child);
 		}
@@ -320,6 +324,12 @@ fn items_from_brick(
 					apply_size_and_cframe(&cframe, &size, &mut wall);
 					insert_basics(&brick, &colors, &mut wall);
 					Ok(vec![wall])
+				}
+				"Spawn Point" => {
+					let mut spawn = cache.spawn_point();
+					apply_size_and_cframe(&cframe, &size, &mut spawn);
+					insert_basics(&brick, &colors, &mut spawn);
+					Ok(vec![spawn])
 				}
 				_ => Err(()),
 			}

@@ -6,10 +6,13 @@ use std::f32::consts::{FRAC_PI_2, PI};
 
 pub const TWO_PI: f32 = 2. * PI;
 
+pub const SPAWN_HEIGHT: f32 = 0.2;
+
 pub struct SpecialBricksCache {
     cone2x2x2: Option<Item>,
     cone1x1: Option<Item>,
     castle_wall: Option<Item>,
+    spawn_point: Option<Item>,
 }
 
 fn generate_cone(cone_size: f32) -> Item {
@@ -191,12 +194,53 @@ fn generate_castle_wall() -> Item {
     model
 }
 
+fn generate_spawn_point() -> Item {
+    let mut model = Item::default("Model".to_string());
+
+    let mut spawnpoint = Item::default("SpawnLocation".to_string());
+    spawnpoint.properties.insert(
+        "size".to_string(),
+        Property::Vector3(Vector3::new(3., SPAWN_HEIGHT * BRICK_HEIGHT, 3.)),
+    );
+    spawnpoint.properties.insert(
+        "CFrame".to_string(),
+        Property::CFrame(CFrame {
+            vector: Vector3::new(0., (-2.5 + SPAWN_HEIGHT / 2.) * BRICK_HEIGHT, 0.),
+            rotation: Rotation3::from_scaled_axis(NVector3::y() * FRAC_PI_2),
+        }),
+    );
+
+    let mut cover = Item::default("Part".to_string());
+    cover.properties.insert(
+        "size".to_string(),
+        Property::Vector3(Vector3::new(3., (5. - SPAWN_HEIGHT) * BRICK_HEIGHT, 3.)),
+    );
+    cover.properties.insert(
+        "CFrame".to_string(),
+        Property::CFrame(CFrame {
+            vector: Vector3::new(0., SPAWN_HEIGHT / 2. * BRICK_HEIGHT, 0.),
+            rotation: Rotation3::identity(),
+        }),
+    );
+    cover
+        .properties
+        .insert("Transparency".to_string(), Property::Float(0.5));
+    cover
+        .properties
+        .insert("CanCollide".to_string(), Property::Bool(false));
+
+    model.children.push(spawnpoint);
+    model.children.push(cover);
+    model
+}
+
 impl SpecialBricksCache {
     pub fn new() -> Self {
         SpecialBricksCache {
             cone2x2x2: None,
             cone1x1: None,
             castle_wall: None,
+            spawn_point: None,
         }
     }
 
@@ -229,6 +273,17 @@ impl SpecialBricksCache {
                 let wall = generate_castle_wall();
                 self.castle_wall = Some(wall.clone());
                 wall
+            }
+        }
+    }
+
+    pub fn spawn_point(&mut self) -> Item {
+        match &self.spawn_point {
+            Some(spawn) => spawn.clone(),
+            None => {
+                let spawn = generate_spawn_point();
+                self.spawn_point = Some(spawn.clone());
+                spawn
             }
         }
     }
