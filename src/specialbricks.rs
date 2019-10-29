@@ -9,6 +9,7 @@ pub const TWO_PI: f32 = 2. * PI;
 pub struct SpecialBricksCache {
     cone2x2x2: Option<Item>,
     cone1x1: Option<Item>,
+    castle_wall: Option<Item>,
 }
 
 fn generate_cone(cone_size: f32) -> Item {
@@ -113,11 +114,89 @@ fn generate_cone(cone_size: f32) -> Item {
     item
 }
 
+fn generate_castle_wall() -> Item {
+    let mut model = Item::default("Model".to_string());
+
+    let mut bottom = Item::default("Part".to_string());
+    bottom.properties.insert(
+        "size".to_string(),
+        Property::Vector3(Vector3::new(1., 3. * BRICK_HEIGHT, 3.)),
+    );
+    bottom.properties.insert(
+        "CFrame".to_string(),
+        Property::CFrame(CFrame {
+            vector: Vector3::new(0., -1.5 * BRICK_HEIGHT, 0.),
+            rotation: Rotation3::identity(),
+        }),
+    );
+
+    fn create_wall(z: f32) -> Item {
+        let mut wall = Item::default("Part".to_string());
+        wall.properties.insert(
+            "size".to_string(),
+            Property::Vector3(Vector3::new(1., 5. / 3. * BRICK_HEIGHT, 1.)),
+        );
+        wall.properties.insert(
+            "CFrame".to_string(),
+            Property::CFrame(CFrame {
+                vector: Vector3::new(0., 5. / 6. * BRICK_HEIGHT, z),
+                rotation: Rotation3::identity(),
+            }),
+        );
+        wall
+    }
+
+    let left = create_wall(1.);
+    let right = create_wall(-1.);
+
+    let mut top = Item::default("Part".to_string());
+    top.properties.insert(
+        "size".to_string(),
+        Property::Vector3(Vector3::new(1., 4. / 3. * BRICK_HEIGHT, 3.)),
+    );
+    top.properties.insert(
+        "CFrame".to_string(),
+        Property::CFrame(CFrame {
+            vector: Vector3::new(0., 7. / 3. * BRICK_HEIGHT, 0.),
+            rotation: Rotation3::identity(),
+        }),
+    );
+
+    fn create_corner(zpos: f32, yrot: f32) -> Item {
+        let mut corner = Item::default("WedgePart".to_string());
+        corner.properties.insert(
+            "size".to_string(),
+            Property::Vector3(Vector3::new(1., BRICK_HEIGHT / 3., 1. / 3.)),
+        );
+        corner.properties.insert(
+            "CFrame".to_string(),
+            Property::CFrame(CFrame {
+                vector: Vector3::new(0., 3. / 2. * BRICK_HEIGHT, zpos),
+                rotation: Rotation3::from_scaled_axis(NVector3::x() * PI)
+                    * Rotation3::from_scaled_axis(NVector3::y() * yrot),
+            }),
+        );
+        corner
+    }
+
+    let left_corner = create_corner(2. / 6., PI);
+    let right_corner = create_corner(-2. / 6., 0.);
+
+    model.children.push(bottom);
+    model.children.push(left);
+    model.children.push(right);
+    model.children.push(left_corner);
+    model.children.push(right_corner);
+    model.children.push(top);
+    model
+}
+
 impl SpecialBricksCache {
     pub fn new() -> Self {
         SpecialBricksCache {
             cone2x2x2: None,
             cone1x1: None,
+            castle_wall: None,
         }
     }
 
@@ -139,6 +218,17 @@ impl SpecialBricksCache {
                 let cone = generate_cone(1.);
                 self.cone1x1 = Some(cone.clone());
                 cone
+            }
+        }
+    }
+
+    pub fn castle_wall(&mut self) -> Item {
+        match &self.castle_wall {
+            Some(wall) => wall.clone(),
+            None => {
+                let wall = generate_castle_wall();
+                self.castle_wall = Some(wall.clone());
+                wall
             }
         }
     }

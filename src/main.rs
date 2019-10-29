@@ -312,6 +312,12 @@ fn items_from_brick(
 					insert_basics(&brick, &colors, &mut cone);
 					Ok(vec![cone])
 				}
+				"Castle Wall" => {
+					let mut wall = cache.castle_wall();
+					apply_size_and_cframe(&cframe, &size, &mut wall);
+					insert_basics(&brick, &colors, &mut wall);
+					Ok(vec![wall])
+				}
 				_ => Err(()),
 			}
 		}
