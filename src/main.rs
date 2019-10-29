@@ -576,6 +576,8 @@ fn main() {
 			"!! {} brick types in this file could not be converted !!",
 			unknown_bricks.len()
 		);
+		let unknown_bricks = &mut unknown_bricks.into_iter().collect::<Vec<_>>()[..];
+		unknown_bricks.sort();
 		for unknown_brick in unknown_bricks {
 			eprintln!("Unknown brick type: {}", unknown_brick);
 		}
