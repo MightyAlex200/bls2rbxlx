@@ -28,6 +28,8 @@ pub const CONE_RESOLUTION: u8 = 32;
 
 pub const CONE_WALL_WIDTH: f32 = 0.01;
 
+pub const WEDGE_LIP_SIZE: f32 = 0.125;
+
 lazy_static! {
 	// TODO: Lights, prints
 	static ref TALL_BRICK_RE: Regex = Regex::new(r"^(\d+)x(\d+)x(\d+)( Print)?$").unwrap();
@@ -42,7 +44,7 @@ fn items_from_brick(
 	scale: f32,
 	cache: &mut SpecialBricksCache,
 ) -> Result<Vec<Item>, ()> {
-	let wedge_lip_size: f32 = 0.15 * scale;
+	let wedge_lip_size: f32 = WEDGE_LIP_SIZE * BRICK_HEIGHT * scale;
 
 	fn apply_size_and_cframe(cframe: &CFrame, size: &Vector3, item: &mut Item) {
 		item.properties
@@ -336,6 +338,42 @@ fn items_from_brick(
 					apply_size_and_cframe(&cframe, &size, &mut window);
 					insert_basics(&brick, &colors, &mut window);
 					Ok(vec![window])
+				}
+				"25° Crest 1x" => {
+					let mut crest = cache.crest_1x_25();
+					apply_size_and_cframe(&cframe, &size, &mut crest);
+					insert_basics(&brick, &colors, &mut crest);
+					Ok(vec![crest])
+				}
+				"25° Crest Corner" => {
+					let mut crest = cache.crest_corner_25();
+					apply_size_and_cframe(&cframe, &size, &mut crest);
+					insert_basics(&brick, &colors, &mut crest);
+					Ok(vec![crest])
+				}
+				"25° Crest End" => {
+					let mut crest = cache.crest_end_25();
+					apply_size_and_cframe(&cframe, &size, &mut crest);
+					insert_basics(&brick, &colors, &mut crest);
+					Ok(vec![crest])
+				}
+				"45° Crest 1x" => {
+					let mut crest = cache.crest_1x_45();
+					apply_size_and_cframe(&cframe, &size, &mut crest);
+					insert_basics(&brick, &colors, &mut crest);
+					Ok(vec![crest])
+				}
+				"45° Crest Corner" => {
+					let mut crest = cache.crest_corner_45();
+					apply_size_and_cframe(&cframe, &size, &mut crest);
+					insert_basics(&brick, &colors, &mut crest);
+					Ok(vec![crest])
+				}
+				"45° Crest End" => {
+					let mut crest = cache.crest_end_45();
+					apply_size_and_cframe(&cframe, &size, &mut crest);
+					insert_basics(&brick, &colors, &mut crest);
+					Ok(vec![crest])
 				}
 				_ => Err(()),
 			}

@@ -1,5 +1,5 @@
 use crate::types::{CFrame, Item, Property, Vector3};
-use crate::{BRICK_HEIGHT, CONE_RESOLUTION, CONE_WALL_WIDTH};
+use crate::{BRICK_HEIGHT, CONE_RESOLUTION, CONE_WALL_WIDTH, WEDGE_LIP_SIZE};
 use nalgebra::{Point3, Rotation3, Vector3 as NVector3};
 
 use std::f32::consts::{FRAC_PI_2, PI};
@@ -15,6 +15,12 @@ pub struct SpecialBricksCache {
     castle_wall: Option<Item>,
     spawn_point: Option<Item>,
     window_1x4x3: Option<Item>,
+    crest_1x_25: Option<Item>,
+    crest_corner_25: Option<Item>,
+    crest_end_25: Option<Item>,
+    crest_1x_45: Option<Item>,
+    crest_corner_45: Option<Item>,
+    crest_end_45: Option<Item>,
 }
 
 fn generate_cone(cone_size: f32) -> Item {
@@ -308,6 +314,155 @@ fn generate_window() -> Item {
     model
 }
 
+fn generate_crest_lip(x: f32, z: f32) -> Item {
+    let mut lip = Item::default("Part".to_string());
+    lip.properties.insert(
+        "size".to_string(),
+        Property::Vector3(Vector3::new(x, WEDGE_LIP_SIZE * BRICK_HEIGHT, z)),
+    );
+    lip.properties.insert(
+        "CFrame".to_string(),
+        Property::CFrame(CFrame {
+            vector: Vector3::new(0., (-1. + WEDGE_LIP_SIZE) * BRICK_HEIGHT / 2., 0.),
+            rotation: Rotation3::identity(),
+        }),
+    );
+    lip
+}
+
+fn generate_crest(height: f32) -> Item {
+    let mut model = Item::default("Model".to_string());
+
+    let lip = generate_crest_lip(1., 2.);
+
+    fn generate_wedge(z: f32, yrot: f32, height: f32) -> Item {
+        let mut wedge = Item::default("WedgePart".to_string());
+
+        wedge.properties.insert(
+            "size".to_string(),
+            Property::Vector3(Vector3::new(
+                1.,
+                (height - WEDGE_LIP_SIZE) * BRICK_HEIGHT,
+                1.,
+            )),
+        );
+        wedge.properties.insert(
+            "CFrame".to_string(),
+            Property::CFrame(CFrame {
+                vector: Vector3::new(0., (-1. + WEDGE_LIP_SIZE + height) * BRICK_HEIGHT / 2., z),
+                rotation: Rotation3::from_scaled_axis(NVector3::y() * yrot),
+            }),
+        );
+
+        wedge
+    }
+
+    let wedge_1 = generate_wedge(0.5, PI, height);
+    let wedge_2 = generate_wedge(-0.5, 0., height);
+
+    model.children.push(wedge_1);
+    model.children.push(wedge_2);
+    model.children.push(lip);
+    model
+}
+
+fn generate_crest_corner(height: f32) -> Item {
+    let mut model = Item::default("Model".to_string());
+
+    let lip = generate_crest_lip(2., 2.);
+
+    fn generate_wedge(x: f32, z: f32, yrot: f32, height: f32) -> Item {
+        let mut wedge = Item::default("WedgePart".to_string());
+
+        wedge.properties.insert(
+            "size".to_string(),
+            Property::Vector3(Vector3::new(
+                1.,
+                (height - WEDGE_LIP_SIZE) * BRICK_HEIGHT,
+                1.,
+            )),
+        );
+        wedge.properties.insert(
+            "CFrame".to_string(),
+            Property::CFrame(CFrame {
+                vector: Vector3::new(x, (-1. + WEDGE_LIP_SIZE + height) * BRICK_HEIGHT / 2., z),
+                rotation: Rotation3::from_scaled_axis(NVector3::y() * yrot),
+            }),
+        );
+
+        wedge
+    }
+
+    let wedge_1 = generate_wedge(0.5, 0.5, PI, height);
+    let wedge_2 = generate_wedge(0.5, -0.5, 0., height);
+    let wedge_3 = generate_wedge(-0.5, 0.5, FRAC_PI_2, height);
+    let wedge_4 = generate_wedge(0.5, 0.5, 3. * FRAC_PI_2, height);
+    let mut wedge_corner = Item::default("CornerWedgePart".to_string());
+    wedge_corner.properties.insert(
+        "size".to_string(),
+        Property::Vector3(Vector3::new(
+            1.,
+            (height - WEDGE_LIP_SIZE) * BRICK_HEIGHT,
+            1.,
+        )),
+    );
+    wedge_corner.properties.insert(
+        "CFrame".to_string(),
+        Property::CFrame(CFrame {
+            vector: Vector3::new(
+                -0.5,
+                (-1. + WEDGE_LIP_SIZE + height) * BRICK_HEIGHT / 2.,
+                -0.5,
+            ),
+            rotation: Rotation3::from_scaled_axis(NVector3::y() * -FRAC_PI_2),
+        }),
+    );
+
+    model.children.push(wedge_1);
+    model.children.push(wedge_2);
+    model.children.push(wedge_3);
+    model.children.push(wedge_4);
+    model.children.push(wedge_corner);
+    model.children.push(lip);
+    model
+}
+
+fn generate_crest_end(height: f32) -> Item {
+    let mut model = Item::default("Model".to_string());
+
+    let lip = generate_crest_lip(1., 2.);
+
+    fn generate_wedge(z: f32, yrot: f32, height: f32) -> Item {
+        let mut wedge = Item::default("CornerWedgePart".to_string());
+
+        wedge.properties.insert(
+            "size".to_string(),
+            Property::Vector3(Vector3::new(
+                1.,
+                (height - WEDGE_LIP_SIZE) * BRICK_HEIGHT,
+                1.,
+            )),
+        );
+        wedge.properties.insert(
+            "CFrame".to_string(),
+            Property::CFrame(CFrame {
+                vector: Vector3::new(0., (-1. + WEDGE_LIP_SIZE + height) * BRICK_HEIGHT / 2., z),
+                rotation: Rotation3::from_scaled_axis(NVector3::y() * yrot),
+            }),
+        );
+
+        wedge
+    }
+
+    let wedge_1 = generate_wedge(0.5, FRAC_PI_2, height);
+    let wedge_2 = generate_wedge(-0.5, -PI, height);
+
+    model.children.push(wedge_1);
+    model.children.push(wedge_2);
+    model.children.push(lip);
+    model
+}
+
 impl SpecialBricksCache {
     pub fn new() -> Self {
         SpecialBricksCache {
@@ -316,6 +471,12 @@ impl SpecialBricksCache {
             castle_wall: None,
             spawn_point: None,
             window_1x4x3: None,
+            crest_1x_25: None,
+            crest_corner_25: None,
+            crest_end_25: None,
+            crest_1x_45: None,
+            crest_corner_45: None,
+            crest_end_45: None,
         }
     }
 
@@ -370,6 +531,72 @@ impl SpecialBricksCache {
                 let window = generate_window();
                 self.window_1x4x3 = Some(window.clone());
                 window
+            }
+        }
+    }
+
+    pub fn crest_1x_25(&mut self) -> Item {
+        match &self.crest_1x_25 {
+            Some(crest) => crest.clone(),
+            None => {
+                let crest = generate_crest(2. / 3.);
+                self.crest_1x_25 = Some(crest.clone());
+                crest
+            }
+        }
+    }
+
+    pub fn crest_corner_25(&mut self) -> Item {
+        match &self.crest_corner_25 {
+            Some(crest) => crest.clone(),
+            None => {
+                let crest = generate_crest_corner(2. / 3.);
+                self.crest_corner_25 = Some(crest.clone());
+                crest
+            }
+        }
+    }
+
+    pub fn crest_end_25(&mut self) -> Item {
+        match &self.crest_end_25 {
+            Some(crest) => crest.clone(),
+            None => {
+                let crest = generate_crest_end(2. / 3.);
+                self.crest_end_25 = Some(crest.clone());
+                crest
+            }
+        }
+    }
+
+    pub fn crest_1x_45(&mut self) -> Item {
+        match &self.crest_1x_45 {
+            Some(crest) => crest.clone(),
+            None => {
+                let crest = generate_crest(1.);
+                self.crest_1x_45 = Some(crest.clone());
+                crest
+            }
+        }
+    }
+
+    pub fn crest_corner_45(&mut self) -> Item {
+        match &self.crest_corner_45 {
+            Some(crest) => crest.clone(),
+            None => {
+                let crest = generate_crest_corner(1.);
+                self.crest_corner_45 = Some(crest.clone());
+                crest
+            }
+        }
+    }
+
+    pub fn crest_end_45(&mut self) -> Item {
+        match &self.crest_end_45 {
+            Some(crest) => crest.clone(),
+            None => {
+                let crest = generate_crest_end(1.);
+                self.crest_end_45 = Some(crest.clone());
+                crest
             }
         }
     }
