@@ -322,7 +322,7 @@ pub const END_XML: &str = r#"
 	</Item>
 	<Item class="Lighting" referent="RBXA81187996F3D4FAABAA731EBA8E2E166">
 		<Properties>
-			<Color3 name="Ambient">4278190080</Color3>
+			<Color3 name="Ambient">4284769380</Color3>
 			<float name="Brightness">1</float>
 			<Color3 name="ColorShift_Bottom">4278190080</Color3>
 			<Color3 name="ColorShift_Top">4278190080</Color3>
@@ -330,10 +330,10 @@ pub const END_XML: &str = r#"
 			<float name="FogEnd">100000</float>
 			<float name="FogStart">0</float>
 			<float name="GeographicLatitude">41.7332993</float>
-			<bool name="GlobalShadows">true</bool>
+			<bool name="GlobalShadows">false</bool>
 			<string name="Name">Lighting</string>
 			<Color3 name="OutdoorAmbient">4286611584</Color3>
-			<bool name="Outlines">true</bool>
+			<bool name="Outlines">false</bool>
 			<Color3 name="ShadowColor">4289967032</Color3>
 			<string name="TimeOfDay">14:00:00</string>
 		</Properties>
