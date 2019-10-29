@@ -293,19 +293,28 @@ fn items_from_brick(
 				},
 			])
 		}
-		BrickType::Unknown => match brick.ui_name.as_str() {
-			// Special bricks
-			// TODO: Ramp crests, Vehicle spawn, small cone, spawn, roads
-			"2x2x2 Cone" => {
-				let mut cone = cache.cone2x2x2();
-				let cframe = cframe_from_pos_and_rot(brick.position, brick.angle, false, scale);
-				let size = Vector3::new(1., 1., 1.) * scale;
-				apply_size_and_cframe(&cframe, &size, &mut cone);
-				insert_basics(&brick, &colors, &mut cone);
-				Ok(vec![cone])
+		BrickType::Unknown => {
+			let cframe = cframe_from_pos_and_rot(brick.position, brick.angle, false, scale);
+			let size = Vector3::new(1., 1., 1.) * scale;
+			match brick.ui_name.as_str() {
+				// Special bricks
+				// TODO: Ramp crests, Vehicle spawn, small cone, spawn, roads
+				"2x2x2 Cone" => {
+					let mut cone = cache.cone2x2x2();
+
+					apply_size_and_cframe(&cframe, &size, &mut cone);
+					insert_basics(&brick, &colors, &mut cone);
+					Ok(vec![cone])
+				}
+				"1x1 Cone" => {
+					let mut cone = cache.cone1x1();
+					apply_size_and_cframe(&cframe, &size, &mut cone);
+					insert_basics(&brick, &colors, &mut cone);
+					Ok(vec![cone])
+				}
+				_ => Err(()),
 			}
-			_ => Err(()),
-		},
+		}
 	}
 }
 
