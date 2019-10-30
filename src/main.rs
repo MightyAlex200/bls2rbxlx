@@ -48,21 +48,17 @@ fn items_from_brick(
 	let wedge_lip_size: f32 = WEDGE_LIP_SIZE * BRICK_HEIGHT * scale;
 
 	fn apply_size_and_cframe(cframe: &CFrame, size: &Vector3, item: &mut Item) {
-		item.properties
-			.entry("size".to_string())
-			.and_modify(|s| match s {
-				Property::Vector3(v) => *v *= *size,
-				_ => unreachable!(),
-			});
-		item.properties
-			.entry("CFrame".to_string())
-			.and_modify(|c| match c {
-				Property::CFrame(ci) => {
-					*ci *= *size;
-					*ci += *cframe;
-				}
-				_ => unreachable!(),
-			});
+		item.properties.entry("size").and_modify(|s| match s {
+			Property::Vector3(v) => *v *= *size,
+			_ => unreachable!(),
+		});
+		item.properties.entry("CFrame").and_modify(|c| match c {
+			Property::CFrame(ci) => {
+				*ci *= *size;
+				*ci += *cframe;
+			}
+			_ => unreachable!(),
+		});
 		for child in item.children.iter_mut() {
 			apply_size_and_cframe(cframe, size, child);
 		}
@@ -75,11 +71,11 @@ fn items_from_brick(
 	) {
 		let color: Color3 = colors[brick.color_index as usize].into();
 		item.properties
-			.entry("Color3uint8".to_string())
+			.entry("Color3uint8")
 			.or_insert(Property::Color3(color));
 		if !item.properties.contains_key("Transparency") || !brick.rendering {
 			item.properties.insert(
-				"Transparency".to_string(),
+				"Transparency",
 				Property::Float(if !brick.rendering {
 					1.
 				} else {
@@ -88,7 +84,7 @@ fn items_from_brick(
 			);
 		}
 		item.properties
-			.entry("CanCollide".to_string())
+			.entry("CanCollide")
 			.or_insert(Property::Bool(brick.collision));
 		for child in item.children.iter_mut() {
 			insert_basics(brick, colors, child);
@@ -97,15 +93,12 @@ fn items_from_brick(
 
 	match get_brick_type(&brick, scale) {
 		BrickType::Regular { cframe, size, mesh } => Ok(vec![{
-			let mut item = Item::default("Part".to_string());
-			item.properties
-				.insert("size".to_string(), Property::Vector3(size));
-			item.properties
-				.insert("CFrame".to_string(), Property::CFrame(cframe));
+			let mut item = Item::default("Part");
+			item.properties.insert("size", Property::Vector3(size));
+			item.properties.insert("CFrame", Property::CFrame(cframe));
 			insert_basics(&brick, &colors, &mut item);
 			if let RegularBrickMesh::Round = mesh {
-				item.children
-					.push(Item::default("CylinderMesh".to_string()))
+				item.children.push(Item::default("CylinderMesh"))
 			}
 			item
 		}]),
@@ -116,13 +109,13 @@ fn items_from_brick(
 		} => Ok(vec![
 			{
 				// Wedge part of ramp
-				let mut item = Item::default("WedgePart".to_string());
+				let mut item = Item::default("WedgePart");
 				item.properties.insert(
-					"size".to_string(),
+					"size",
 					Property::Vector3(size - Vector3::new(0., wedge_lip_size, 0.)),
 				);
 				item.properties.insert(
-					"CFrame".to_string(),
+					"CFrame",
 					Property::CFrame(
 						cframe
 							+ Vector3::new(
@@ -138,13 +131,13 @@ fn items_from_brick(
 			},
 			{
 				// Ramp lip (bottom of ramp)
-				let mut item = Item::default("Part".to_string());
+				let mut item = Item::default("Part");
 				item.properties.insert(
-					"size".to_string(),
+					"size",
 					Property::Vector3(Vector3::new(size.x(), wedge_lip_size, size.z())),
 				);
 				item.properties.insert(
-					"CFrame".to_string(),
+					"CFrame",
 					Property::CFrame(
 						cframe
 							+ Vector3::new(
@@ -161,13 +154,13 @@ fn items_from_brick(
 			},
 			{
 				// Back of ramp
-				let mut item = Item::default("Part".to_string());
+				let mut item = Item::default("Part");
 				item.properties.insert(
-					"size".to_string(),
+					"size",
 					Property::Vector3(Vector3::new(size.x(), size.y(), scale)),
 				);
 				item.properties.insert(
-					"CFrame".to_string(),
+					"CFrame",
 					Property::CFrame(cframe - (forward_from_angle(brick.angle) * (size.z() / 2.))),
 				);
 				insert_basics(&brick, &colors, &mut item);
@@ -187,9 +180,9 @@ fn items_from_brick(
 			Ok(vec![
 				{
 					// Corner wedge of corner ramp
-					let mut item = Item::default("CornerWedgePart".to_string());
+					let mut item = Item::default("CornerWedgePart");
 					item.properties.insert(
-						"size".to_string(),
+						"size",
 						Property::Vector3(Vector3::new(
 							size.x() - scale,
 							size.y() - wedge_lip_size,
@@ -197,7 +190,7 @@ fn items_from_brick(
 						)),
 					);
 					item.properties.insert(
-						"CFrame".to_string(),
+						"CFrame",
 						Property::CFrame(
 							corner_cframe
 								+ forward_from_angle(brick.angle) * scale * 0.5
@@ -211,13 +204,13 @@ fn items_from_brick(
 				},
 				{
 					// Corner of corner ramp
-					let mut item = Item::default("Part".to_string());
+					let mut item = Item::default("Part");
 					item.properties.insert(
-						"size".to_string(),
+						"size",
 						Property::Vector3(Vector3::new(scale, size.y() - wedge_lip_size, scale)),
 					);
 					item.properties.insert(
-						"CFrame".to_string(),
+						"CFrame",
 						Property::CFrame(
 							corner_cframe
 								+ forward_from_angle(brick.angle) * (-size.x() / 2.)
@@ -233,9 +226,9 @@ fn items_from_brick(
 				},
 				{
 					// First side of the corner ramp
-					let mut item = Item::default("WedgePart".to_string());
+					let mut item = Item::default("WedgePart");
 					item.properties.insert(
-						"size".to_string(),
+						"size",
 						Property::Vector3(Vector3::new(
 							scale,
 							size.y() - wedge_lip_size,
@@ -243,7 +236,7 @@ fn items_from_brick(
 						)),
 					);
 					item.properties.insert(
-						"CFrame".to_string(),
+						"CFrame",
 						Property::CFrame(
 							wedge_cframe_1
 								+ forward_from_angle(brick.angle) * (-size.x() / 2.)
@@ -257,9 +250,9 @@ fn items_from_brick(
 				},
 				{
 					// Second side of the corner ramp
-					let mut item = Item::default("WedgePart".to_string());
+					let mut item = Item::default("WedgePart");
 					item.properties.insert(
-						"size".to_string(),
+						"size",
 						Property::Vector3(Vector3::new(
 							scale,
 							size.y() - wedge_lip_size,
@@ -267,7 +260,7 @@ fn items_from_brick(
 						)),
 					);
 					item.properties.insert(
-						"CFrame".to_string(),
+						"CFrame",
 						Property::CFrame(
 							wedge_cframe_2
 								+ forward_from_angle(brick.angle) * scale * 0.5
@@ -281,13 +274,13 @@ fn items_from_brick(
 				},
 				{
 					// Lip of corner ramp (bottom of ramp)
-					let mut item = Item::default("Part".to_string());
+					let mut item = Item::default("Part");
 					item.properties.insert(
-						"size".to_string(),
+						"size",
 						Property::Vector3(Vector3::new(size.x(), wedge_lip_size, size.z())),
 					);
 					item.properties.insert(
-						"CFrame".to_string(),
+						"CFrame",
 						Property::CFrame(
 							corner_cframe
 								+ Vector3::new(

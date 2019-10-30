@@ -217,15 +217,15 @@ impl ToString for RbxUuid {
 
 #[derive(Clone)]
 pub struct Item {
-    pub class: String,
+    pub class: &'static str,
     pub referent: RbxUuid,
-    pub properties: HashMap<String, Property>,
+    pub properties: HashMap<&'static str, Property>,
     pub children: Vec<Item>,
 }
 
 impl Item {
-    pub fn default(class: String) -> Item {
-        let mut properties: HashMap<String, Property> = HashMap::new();
+    pub fn default(class: &'static str) -> Item {
+        let mut properties: HashMap<&'static str, Property> = HashMap::new();
         vec![
             ("Anchored", Property::Bool(true)),
             ("BackParamA", Property::Float(-0.5)),
@@ -269,7 +269,7 @@ impl Item {
         ]
         .into_iter()
         .for_each(|(n, p)| {
-            properties.insert(n.to_string(), p);
+            properties.insert(n, p);
         });
         Item {
             class,
